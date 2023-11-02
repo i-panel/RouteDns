@@ -179,6 +179,9 @@ func (r *Blocklist) String() string {
 	return r.id
 }
 
+func (r *Blocklist) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 func (r *Blocklist) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

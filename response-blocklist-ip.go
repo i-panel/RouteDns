@@ -77,6 +77,9 @@ func (r *ResponseBlocklistIP) String() string {
 	return r.id
 }
 
+func (r *ResponseBlocklistIP) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 func (r *ResponseBlocklistIP) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

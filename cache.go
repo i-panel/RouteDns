@@ -216,6 +216,9 @@ func (r *Cache) String() string {
 	return r.id
 }
 
+func (r *Cache) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 // Returns an answer from the cache with it's TTL updated or false in case of a cache-miss.
 func (r *Cache) answerFromCache(q *dns.Msg) (*dns.Msg, bool, bool) {
 	a, prefetchEligible, ok := r.backend.Lookup(q)

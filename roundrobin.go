@@ -45,3 +45,6 @@ func (r *RoundRobin) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *RoundRobin) String() string {
 	return r.id
 }
+
+func (r *RoundRobin) SetIPBlocklistDB(db IPBlocklistDB) {
+}

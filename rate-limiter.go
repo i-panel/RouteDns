@@ -121,3 +121,6 @@ func (r *RateLimiter) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *RateLimiter) String() string {
 	return r.id
 }
+
+func (r *RateLimiter) SetIPBlocklistDB(db IPBlocklistDB) {
+}

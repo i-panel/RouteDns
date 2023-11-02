@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	rdns "github.com/folbricht/routedns"
 )
 
-type config struct {
+type Config struct {
 	Title             string
 	BootstrapResolver resolver `toml:"bootstrap-resolver"`
 	Listeners         map[string]listener
@@ -132,6 +132,7 @@ type group struct {
 	AllowlistRefresh  int      `toml:"allowlist-refresh"`
 	LocationDB        string   `toml:"location-db"` // GeoIP database file for response blocklist. Default "/usr/share/GeoIP/GeoLite2-City.mmdb"
 	Inverted          bool     // Only allow IPs on the blocklist. Supported in response-blocklist-ip and response-blocklist-name
+	AllowRemoteIpDB   bool     `toml:"allow-remote-db"` // allow to get ip from remote
 
 	// Static responder options
 	Answer   []string
@@ -197,11 +198,11 @@ type route struct {
 }
 
 // LoadConfig reads a config file and returns the decoded structure.
-func loadConfig(name ...string) (config, error) {
+func LoadConfig(name ...string) (Config, error) {
 	b := new(bytes.Buffer)
-	var c config
+	var c Config
 	for _, fn := range name {
-		if err := loadFile(b, fn); err != nil {
+		if err := LoadFile(b, fn); err != nil {
 			return c, err
 		}
 		b.WriteString("\n")
@@ -210,7 +211,7 @@ func loadConfig(name ...string) (config, error) {
 	return c, err
 }
 
-func loadFile(w io.Writer, name string) error {
+func LoadFile(w io.Writer, name string) error {
 	f, err := os.Open(name)
 	if err != nil {
 		return err

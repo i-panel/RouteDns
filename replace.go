@@ -94,3 +94,6 @@ func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *Replace) String() string {
 	return r.id
 }
+
+func (r *Replace) SetIPBlocklistDB(db IPBlocklistDB) {
+}

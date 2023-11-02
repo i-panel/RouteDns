@@ -86,3 +86,6 @@ func (d *DoTClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (d *DoTClient) String() string {
 	return d.id
 }
+
+func (r *DoTClient) SetIPBlocklistDB(db IPBlocklistDB) {
+}

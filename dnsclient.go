@@ -82,6 +82,9 @@ func (d *DNSClient) String() string {
 	return d.id
 }
 
+func (r *DNSClient) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 // GenericDNSClient is a workaround for dns.Client not supporting custom dialers
 // (only *net.Dialer) which prevents the use of proxies. It implements the same
 // Dial functionality, while supporting custom dialers.

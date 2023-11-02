@@ -112,6 +112,9 @@ func (d *DTLSClient) String() string {
 	return d.id
 }
 
+func (r *DTLSClient) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 type dtlsDialer struct {
 	raddr      *net.UDPAddr
 	laddr      *net.UDPAddr

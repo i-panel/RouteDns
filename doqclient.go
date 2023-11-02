@@ -199,6 +199,9 @@ func (d *DoQClient) String() string {
 	return d.id
 }
 
+func (r *DoQClient) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
 func (s *quicConnection) getStream(endpoint string, log *logrus.Entry) (quic.Stream, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

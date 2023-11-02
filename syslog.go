@@ -107,3 +107,6 @@ func (r *Syslog) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *Syslog) String() string {
 	return r.id
 }
+
+func (r *Syslog) SetIPBlocklistDB(db IPBlocklistDB) {
+}

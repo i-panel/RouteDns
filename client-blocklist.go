@@ -27,6 +27,8 @@ type ClientBlocklistOptions struct {
 
 	// Refresh period for the blocklist. Disabled if 0.
 	BlocklistRefresh time.Duration
+
+	AllowRemote bool
 }
 
 // NewClientBlocklistIP returns a new instance of a client blocklist resolver.
@@ -66,6 +68,12 @@ func (r *ClientBlocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *ClientBlocklist) String() string {
 	return r.id
+}
+
+func (r *ClientBlocklist) SetIPBlocklistDB(db IPBlocklistDB) {
+	if r.ClientBlocklistOptions.AllowRemote {
+		r.ClientBlocklistOptions.BlocklistDB = db
+	}
 }
 
 func (r *ClientBlocklist) refreshLoopBlocklist(refresh time.Duration) {
