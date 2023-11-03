@@ -1131,6 +1131,8 @@ func newBlocklistDB(l list, rules []string) (rdns.BlocklistDB, error) {
 		return rdns.NewRegexpDB(name, loader)
 	case "domain":
 		return rdns.NewDomainDB(name, loader)
+	case "hostsx":
+		return rdns.NewHostsXDB(name, loader)
 	case "hosts":
 		return rdns.NewHostsDB(name, loader)
 	default:
