@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Title             string
+	Enable            bool
 	BootstrapResolver resolver `toml:"bootstrap-resolver"`
 	Listeners         map[string]listener
 	Resolvers         map[string]resolver

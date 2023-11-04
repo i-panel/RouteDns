@@ -98,12 +98,45 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 	// Forward to upstream or the optional allowlist-resolver immediately if there's a match in the allowlist
 	if allowlistDB != nil {
-		if _, _, match, ok := allowlistDB.Match(question); ok {
+		if ip, _, match, ok := allowlistDB.Match(question); ok {
 			log = log.WithFields(logrus.Fields{"list": match.List, "rule": match.Rule})
 			r.metrics.allowed.Add(1)
 			if r.AllowListResolver != nil {
 				log.WithField("resolver", r.AllowListResolver.String()).Debug("matched allowlist, forwarding")
 				return r.AllowListResolver.Resolve(q, ci)
+			}
+
+			answer := new(dns.Msg)
+			answer.SetReply(q)
+			// We have an IP address to return, make sure it's of the right type. If not return NXDOMAIN.
+			if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
+				answer.Answer = []dns.RR{
+					&dns.A{
+						Hdr: dns.RR_Header{
+							Name:   question.Name,
+							Rrtype: dns.TypeA,
+							Class:  question.Qclass,
+							Ttl:    3600,
+						},
+						A: ip,
+					},
+				}
+				log.Debug("spoofing response")
+				return answer, nil
+			} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
+				answer.Answer = []dns.RR{
+					&dns.AAAA{
+						Hdr: dns.RR_Header{
+							Name:   question.Name,
+							Rrtype: dns.TypeAAAA,
+							Class:  question.Qclass,
+							Ttl:    3600,
+						},
+						AAAA: ip,
+					},
+				}
+				log.Debug("spoofing response")
+				return answer, nil
 			}
 			log.WithField("resolver", r.resolver.String()).Debug("matched allowlist, forwarding")
 			return r.resolver.Resolve(q, ci)

@@ -50,7 +50,7 @@ func NewClientAllowlist(id string, resolver Resolver, opt ClientAllowlistOptions
 // REFUSED if the client IP is on the allowlist, or sends the query to an alternative
 // resolver if one is configured.
 func (r *ClientAllowlist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	if match, ok := r.AllowlistDB.Match(ci.SourceIP); !ok {
+	if match, ok := r.AllowlistDB.Match(ci.SourceIP); ok {
 		log := Log.WithFields(logrus.Fields{"id": r.id, "qname": qName(q), "list": match.List, "rule": match.Rule, "ip": ci.SourceIP})
 		r.metrics.blocked.Add(1)
 		if r.AllowlistResolver != nil {

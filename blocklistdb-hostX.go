@@ -408,8 +408,12 @@ func (m *HostsXDB) Match(q mdns.Question) (net.IP, []string, *BlocklistMatch, bo
 		return nil, nil, nil, false
 	}
 
+	match := m.hosts.Lookup(domain, option)
+	if len(match) == 0 {
+		return nil, nil, nil, false
+	}
 	// Static host lookup
-	ips, err := toNetIP(m.hosts.Lookup(domain, option))
+	ips, err := toNetIP(match)
 	return ips[0],
 		nil,
 		&BlocklistMatch{

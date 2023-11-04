@@ -147,6 +147,10 @@ func (s *DoHListener) Stop() error {
 	return s.httpServer.Shutdown(context.Background())
 }
 
+func (s *DoHListener) Close() error {
+	return s.Stop()
+}
+
 func (s *DoHListener) String() string {
 	return s.id
 }

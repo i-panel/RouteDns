@@ -77,7 +77,6 @@ func (n Node) ID() string {
 var onClose []func()
 
 type Manager struct {
-	IsEnable  bool
 	Running   bool
 	Config    *Config
 	Listeners []rdns.Listener
@@ -302,25 +301,34 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 	}, nil
 }
 
-func (m Manager) Close() error {
+func (m *Manager) Close() error {
 	rdns.Log.Info("stopping")
 	for _, f := range m.OnClose {
 		f()
 	}
+	for _, listener := range m.Listeners {
+		err := listener.Stop()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (m Manager) Start() error {
+func (m *Manager) Start() error {
 	// Start the listeners
 	for _, l := range m.Listeners {
-		go func(l rdns.Listener) {
-			for {
-				err := l.Start()
-				rdns.Log.WithError(err).Error("listener failed")
-				time.Sleep(time.Second)
+		go func(l rdns.Listener) error {
+			err := l.Start()
+			if err != nil {
+				return err
 			}
+			rdns.Log.WithError(err).Error("listener failed")
+			time.Sleep(time.Second)
+			return nil
 		}(l)
 	}
+	m.Running = true
 	return nil
 }
 
@@ -642,7 +650,7 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver) er
 		}
 		var allowlistDB rdns.BlocklistDB
 		if len(g.Allowlist) > 0 {
-			allowlistDB, err = newBlocklistDB(list{Format: g.BlocklistFormat}, g.Allowlist)
+			allowlistDB, err = newBlocklistDB(list{Format: g.AllowlistFormat}, g.Allowlist)
 			if err != nil {
 				return err
 			}
@@ -1131,6 +1139,8 @@ func newBlocklistDB(l list, rules []string) (rdns.BlocklistDB, error) {
 		return rdns.NewRegexpDB(name, loader)
 	case "domain":
 		return rdns.NewDomainDB(name, loader)
+	case "domainx":
+		return rdns.NewDomainXDB(name, loader)
 	case "hostsx":
 		return rdns.NewHostsXDB(name, loader)
 	case "hosts":

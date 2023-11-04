@@ -42,6 +42,10 @@ func (s DNSListener) Start() error {
 	return s.ListenAndServe()
 }
 
+func (s DNSListener) Stop() error {
+	return s.Shutdown()
+}
+
 func (s DNSListener) String() string {
 	return s.id
 }
