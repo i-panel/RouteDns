@@ -5,7 +5,41 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/XrayR-project/XrayR/common/mylego"
 )
+
+func GetCertFile(certConfig *mylego.CertConfig) (certFile string, keyFile string, err error) {
+	switch certConfig.CertMode {
+	case "file":
+		if certConfig.CertFile == "" || certConfig.KeyFile == "" {
+			return "", "", fmt.Errorf("cert file path or key file path not exist")
+		}
+		return certConfig.CertFile, certConfig.KeyFile, nil
+	case "dns":
+		lego, err := mylego.New(certConfig)
+		if err != nil {
+			return "", "", err
+		}
+		certPath, keyPath, err := lego.DNSCert()
+		if err != nil {
+			return "", "", err
+		}
+		return certPath, keyPath, err
+	case "http", "tls":
+		lego, err := mylego.New(certConfig)
+		if err != nil {
+			return "", "", err
+		}
+		certPath, keyPath, err := lego.HTTPCert()
+		if err != nil {
+			return "", "", err
+		}
+		return certPath, keyPath, err
+	default:
+		return "", "", fmt.Errorf("unsupported certmode: %s", certConfig.CertMode)
+	}
+}
 
 // TLSServerConfig is a convenience function that builds a tls.Config instance for TLS servers
 // based on common options and certificate+key files.

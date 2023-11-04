@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	M "github.com/XrayR-project/XrayR/common/mylego"
 	rdns "github.com/folbricht/routedns"
 )
 
@@ -32,6 +33,7 @@ type listener struct {
 	NoTLS      bool     `toml:"no-tls"` // Disable TLS in DoH servers
 	AllowedNet []string `toml:"allowed-net"`
 	Frontend   dohFrontend
+	Lego       M.CertConfig `toml:"cert"`
 }
 
 // DoH listener frontend options
@@ -45,13 +47,14 @@ type resolver struct {
 	Transport     string
 	DoH           doh
 	CA            string
-	ClientKey     string `toml:"client-key"`
-	ClientCrt     string `toml:"client-crt"`
-	ServerName    string `toml:"server-name"` // TLS server name presented in the server certificate
-	BootstrapAddr string `toml:"bootstrap-address"`
-	LocalAddr     string `toml:"local-address"`
-	EDNS0UDPSize  uint16 `toml:"edns0-udp-size"` // UDP resolver option
-	QueryTimeout  int    `toml:"query-timeout"`  // Query timeout in seconds
+	ClientKey     string       `toml:"client-key"`
+	ClientCrt     string       `toml:"client-crt"`
+	ServerName    string       `toml:"server-name"` // TLS server name presented in the server certificate
+	BootstrapAddr string       `toml:"bootstrap-address"`
+	LocalAddr     string       `toml:"local-address"`
+	EDNS0UDPSize  uint16       `toml:"edns0-udp-size"` // UDP resolver option
+	QueryTimeout  int          `toml:"query-timeout"`  // Query timeout in seconds
+	Lego          M.CertConfig `toml:"cert"`
 
 	// Proxy configuration
 	Socks5Address      string `toml:"socks5-address"`
