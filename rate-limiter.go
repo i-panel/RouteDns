@@ -124,3 +124,7 @@ func (r *RateLimiter) String() string {
 
 func (r *RateLimiter) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *RateLimiter) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

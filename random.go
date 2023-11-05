@@ -76,6 +76,10 @@ func (r *Random) String() string {
 func (r *Random) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *Random) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 // Pick a random resolver from the list of active ones.
 func (r *Random) pick() Resolver {
 	r.mu.RLock()

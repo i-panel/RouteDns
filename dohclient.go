@@ -203,6 +203,10 @@ func (d *DoHClient) String() string {
 func (r *DoHClient) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *DoHClient) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 // Check the HTTP response status code and parse out the response DNS message.
 func (d *DoHClient) responseFromHTTP(resp *http.Response) (*dns.Msg, error) {
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {

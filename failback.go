@@ -102,6 +102,10 @@ func (r *FailBack) String() string {
 func (r *FailBack) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *FailBack) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 // Thread-safe method to return the currently active resolver.
 func (r *FailBack) current() (Resolver, int) {
 	r.mu.RLock()

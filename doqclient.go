@@ -202,6 +202,10 @@ func (d *DoQClient) String() string {
 func (r *DoQClient) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *DoQClient) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 func (s *quicConnection) getStream(endpoint string, log *logrus.Entry) (quic.Stream, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

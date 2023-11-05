@@ -11,6 +11,14 @@ type MultiIPDB struct {
 
 var _ IPBlocklistDB = MultiIPDB{}
 
+func (db MultiIPDB) Add(rules []string) error {
+	return nil
+}
+
+func (db MultiIPDB) Remove(rules []string) error {
+	return nil
+}
+
 // NewMultiIPDB returns a new instance of a wrapper for blocklists
 func NewMultiIPDB(dbs ...IPBlocklistDB) (MultiIPDB, error) {
 	return MultiIPDB{dbs}, nil

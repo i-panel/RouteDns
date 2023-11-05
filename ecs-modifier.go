@@ -48,6 +48,10 @@ func (r *ECSModifier) String() string {
 func (r *ECSModifier) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *ECSModifier) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 func ECSModifierDelete(id string, q *dns.Msg, ci ClientInfo) {
 	edns0 := q.IsEdns0()
 	if edns0 == nil {

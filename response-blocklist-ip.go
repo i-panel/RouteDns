@@ -13,6 +13,8 @@ import (
 // IPBlocklistDB is a database containing IPs used in blocklists.
 type IPBlocklistDB interface {
 	Reload() (IPBlocklistDB, error)
+	Add(rules []string) error
+	Remove(rules []string) error
 	Match(ip net.IP) (*BlocklistMatch, bool)
 	Close() error
 	fmt.Stringer
@@ -78,6 +80,10 @@ func (r *ResponseBlocklistIP) String() string {
 }
 
 func (r *ResponseBlocklistIP) SetIPBlocklistDB(db IPBlocklistDB) {
+}
+
+func (r *ResponseBlocklistIP) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
 }
 
 func (r *ResponseBlocklistIP) refreshLoopBlocklist(refresh time.Duration) {

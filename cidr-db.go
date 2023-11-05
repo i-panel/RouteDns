@@ -16,6 +16,60 @@ type CidrDB struct {
 
 var _ IPBlocklistDB = &CidrDB{}
 
+func (db *CidrDB) Add(rules []string) error {
+	for _, r := range rules {
+		r = strings.TrimSpace(r)
+		if strings.HasPrefix(r, "#") || r == "" {
+			continue
+		}
+		// Append a mask suffix if there isn't one already
+		if !strings.Contains(r, "/") {
+			if strings.Contains(r, ".") { // ip4
+				r += "/32"
+			} else if strings.Contains(r, ":") { // ip6
+				r += "/128"
+			}
+		}
+		ip, n, err := net.ParseCIDR(r)
+		if err != nil {
+			return err
+		}
+		if addr := ip.To4(); addr == nil {
+			db.ip6.add(n)
+		} else {
+			db.ip4.add(n)
+		}
+	}
+	return nil
+}
+
+func (db *CidrDB) Remove(rules []string) error {
+	for _, r := range rules {
+		r = strings.TrimSpace(r)
+		if strings.HasPrefix(r, "#") || r == "" {
+			continue
+		}
+		// Append a mask suffix if there isn't one already
+		if !strings.Contains(r, "/") {
+			if strings.Contains(r, ".") { // ip4
+				r += "/32"
+			} else if strings.Contains(r, ":") { // ip6
+				r += "/128"
+			}
+		}
+		ip, n, err := net.ParseCIDR(r)
+		if err != nil {
+			return err
+		}
+		if addr := ip.To4(); addr == nil {
+			db.ip6.remove(n)
+		} else {
+			db.ip4.remove(n)
+		}
+	}
+	return nil
+}
+
 // NewCidrDB returns a new instance of a matcher for a list of networks.
 func NewCidrDB(name string, loader BlocklistLoader) (*CidrDB, error) {
 	rules, err := loader.Load()

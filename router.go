@@ -88,3 +88,7 @@ func (r *Router) String() string {
 
 func (r *Router) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *Router) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

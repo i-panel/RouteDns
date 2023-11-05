@@ -29,3 +29,7 @@ func (r *DropResolver) String() string {
 
 func (r *DropResolver) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *DropResolver) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

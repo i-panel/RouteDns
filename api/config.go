@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	Title             string
+	TLS               bool
 	Enable            bool
 	BootstrapResolver resolver `toml:"bootstrap-resolver"`
 	Listeners         map[string]listener

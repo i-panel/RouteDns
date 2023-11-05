@@ -59,3 +59,7 @@ func (r *ResponseCollapse) String() string {
 
 func (r *ResponseCollapse) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *ResponseCollapse) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

@@ -76,6 +76,10 @@ func (r *ClientBlocklist) SetIPBlocklistDB(db IPBlocklistDB) {
 	}
 }
 
+func (r *ClientBlocklist) GetIPBlocklistDB() IPBlocklistDB {
+		return r.ClientBlocklistOptions.BlocklistDB
+}
+
 func (r *ClientBlocklist) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

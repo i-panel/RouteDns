@@ -22,6 +22,14 @@ type GeoIPDB struct {
 
 var _ IPBlocklistDB = &GeoIPDB{}
 
+func (db *GeoIPDB) Add(rules []string) error {
+	return nil
+}
+
+func (db *GeoIPDB) Remove(rules []string) error {
+	return nil
+}
+
 // NewGeoIPDB returns a new instance of a matcher for a location rules.
 func NewGeoIPDB(name string, loader BlocklistLoader, geoDBFile string) (*GeoIPDB, error) {
 	if geoDBFile == "" {

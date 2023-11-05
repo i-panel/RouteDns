@@ -129,6 +129,10 @@ func (r *FastestTCP) String() string {
 func (r *FastestTCP) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *FastestTCP) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 // Probes all IPs and returns only the RR with the fastest responding IP.
 // Waits for the first one that comes back. Returns an error if the fastest response
 // is an error.

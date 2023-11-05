@@ -59,6 +59,10 @@ func (r *ResponseBlocklistName) String() string {
 func (r *ResponseBlocklistName) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *ResponseBlocklistName) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 func (r *ResponseBlocklistName) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

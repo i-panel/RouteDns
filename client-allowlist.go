@@ -75,6 +75,10 @@ func (r *ClientAllowlist) SetIPBlocklistDB(db IPBlocklistDB) {
 	}
 }
 
+func (r *ClientAllowlist) GetIPBlocklistDB() IPBlocklistDB {
+	return r.ClientAllowlistOptions.AllowlistDB
+}
+
 func (r *ClientAllowlist) refreshLoopAllowlist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

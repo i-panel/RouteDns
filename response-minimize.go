@@ -37,3 +37,7 @@ func (r *ResponseMinimize) String() string {
 
 func (r *ResponseMinimize) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *ResponseMinimize) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

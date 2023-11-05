@@ -110,3 +110,7 @@ func (r *Syslog) String() string {
 
 func (r *Syslog) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *Syslog) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

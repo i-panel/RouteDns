@@ -87,3 +87,7 @@ func (r *StaticResolver) String() string {
 
 func (r *StaticResolver) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *StaticResolver) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

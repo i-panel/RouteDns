@@ -89,3 +89,7 @@ func (d *DoTClient) String() string {
 
 func (r *DoTClient) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *DoTClient) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

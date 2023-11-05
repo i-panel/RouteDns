@@ -97,3 +97,7 @@ func (r *Replace) String() string {
 
 func (r *Replace) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *Replace) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

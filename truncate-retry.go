@@ -51,3 +51,7 @@ func (r *TruncateRetry) String() string {
 
 func (r *TruncateRetry) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *TruncateRetry) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}

@@ -69,3 +69,7 @@ func (r *Fastest) String() string {
 
 func (r *Fastest) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *Fastest) GetIPBlocklistDB() IPBlocklistDB {
+	return nil
+}

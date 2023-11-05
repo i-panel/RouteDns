@@ -215,6 +215,11 @@ func (r *Blocklist) String() string {
 func (r *Blocklist) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *Blocklist) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
+
 func (r *Blocklist) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

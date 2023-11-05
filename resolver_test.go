@@ -20,6 +20,10 @@ type TestResolver struct {
 	shouldFail  bool
 }
 
+func (r *TestResolver) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 func (r *TestResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	r.hitCount++
 	if r.shouldFail {

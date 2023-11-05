@@ -82,6 +82,10 @@ func (r *TTLModifier) String() string {
 func (r *TTLModifier) SetIPBlocklistDB(db IPBlocklistDB) {
 }
 
+func (r *TTLModifier) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
+
 // TTLSelectLowest is a function for the TTL Modifier that sets the TTL
 // to the lowest value of all records.
 func TTLSelectLowest(r *TTLModifier, a *dns.Msg) bool {

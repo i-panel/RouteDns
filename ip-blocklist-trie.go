@@ -17,6 +17,46 @@ type ipBlocklistNode struct {
 	leaf        bool
 }
 
+func (t *ipBlocklistTrie) remove(n *net.IPNet) {
+    t.root = t.removeNode(t.root, n.IP, 0, len(n.IP)*8, 0)
+}
+
+func (t *ipBlocklistTrie) removeNode(node *ipBlocklistNode, ip net.IP, bitIndex, size, level int) *ipBlocklistNode {
+    if node == nil {
+        return nil
+    }
+
+    if bitIndex == size {
+        // Check if this node is a leaf for the network
+        if node.leaf {
+            node.leaf = false
+            // If it's a leaf, and no children, we can remove this node
+            if node.left == nil && node.right == nil {
+                return nil
+            }
+        }
+        return node
+    }
+
+    // Finding the bit at bitIndex in the IP
+    b := bit(ip, bitIndex)
+
+    // Go to the appropriate child based on the bit
+    if b == 1 {
+        node.right = t.removeNode(node.right, ip, bitIndex+1, size, level+1)
+    } else {
+        node.left = t.removeNode(node.left, ip, bitIndex+1, size, level+1)
+    }
+
+    // If this node is a leaf node and has no children, it can be removed
+    if node.leaf && node.left == nil && node.right == nil {
+        return nil
+    }
+
+    return node
+}
+
+
 // Add a network to the trie.
 func (t *ipBlocklistTrie) add(n *net.IPNet) {
 	if t.root == nil {

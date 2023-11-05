@@ -48,3 +48,7 @@ func (r *RoundRobin) String() string {
 
 func (r *RoundRobin) SetIPBlocklistDB(db IPBlocklistDB) {
 }
+
+func (r *RoundRobin) GetIPBlocklistDB() (IPBlocklistDB) {
+	return nil
+}
