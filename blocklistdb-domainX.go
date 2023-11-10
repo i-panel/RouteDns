@@ -8,6 +8,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/xtls/xray-core/app/router"
+	"github.com/xtls/xray-core/infra/conf"
 )
 
 // DomainDB holds a list of domain strings (potentially with wildcards). Matching
@@ -19,96 +20,36 @@ type DomainXDB struct {
 	name   string
 	// root   nodeX
 	domains *router.DomainMatcher
-	loader BlocklistLoader
+	loader *PanelLoader
 }
-
-type nodeX map[string]nodeX
 
 var _ BlocklistDB = &DomainXDB{}
 
-func parseDomainRule(domain string) ([]*router.Domain, error) {
-	if strings.HasPrefix(domain, "geosite:") {
-		country := strings.ToUpper(domain[8:])
-		domains, err := loadGeositeWithAttr("geosite.dat", country)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load geosite: %s, err: %s", country, err)
-		}
-		return domains, nil
-	}
-	isExtDatFile := 0
-	{
-		const prefix = "ext:"
-		if strings.HasPrefix(domain, prefix) {
-			isExtDatFile = len(prefix)
-		}
-		const prefixQualified = "ext-domain:"
-		if strings.HasPrefix(domain, prefixQualified) {
-			isExtDatFile = len(prefixQualified)
-		}
-	}
-	if isExtDatFile != 0 {
-		kv := strings.Split(domain[isExtDatFile:], ":")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("invalid external resource: %s", domain)
-		}
-		filename := kv[0]
-		country := kv[1]
-		domains, err := loadGeositeWithAttr(filename, country)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load external sites: %s from %s , err: %s", country, filename, err)
-		}
-		return domains, nil
-	}
-
-	domainRule := new(router.Domain)
-	switch {
-	case strings.HasPrefix(domain, "regexp:"):
-		domainRule.Type = router.Domain_Regex
-		domainRule.Value = domain[7:]
-
-	case strings.HasPrefix(domain, "domain:"):
-		domainRule.Type = router.Domain_Domain
-		domainRule.Value = domain[7:]
-
-	case strings.HasPrefix(domain, "full:"):
-		domainRule.Type = router.Domain_Full
-		domainRule.Value = domain[5:]
-
-	case strings.HasPrefix(domain, "keyword:"):
-		domainRule.Type = router.Domain_Plain
-		domainRule.Value = domain[8:]
-
-	case strings.HasPrefix(domain, "dotless:"):
-		domainRule.Type = router.Domain_Regex
-		switch substr := domain[8:]; {
-		case substr == "":
-			domainRule.Value = "^[^.]*$"
-		case !strings.Contains(substr, "."):
-			domainRule.Value = "^[^.]*" + substr + "[^.]*$"
-		default:
-			return nil, fmt.Errorf("substr in dotless rule should not contain a dot: %s", substr)
-		}
-
-	default:
-		domainRule.Type = router.Domain_Plain
-		domainRule.Value = domain
-	}
-	return []*router.Domain{domainRule}, nil
-}
 
 // NewDomainDB returns a new instance of a matcher for a list of regular expressions.
-func NewDomainXDB(name string, loader BlocklistLoader) (*DomainXDB, error) {
-	domains, err := loader.Load()
-	if err != nil {
-		return nil, err
+func NewDomainXDB(name string, loader *PanelLoader) (*DomainXDB, error) {
+
+	var domains []string
+	switch loader.opt.Type {
+	case "allow":
+		domains = loader.opt.NodeInfo.RouteDNS.Allow.Domains
+	case "block":
+		domains = loader.opt.NodeInfo.RouteDNS.Block.Domains
+	default:
+		return nil, fmt.Errorf("unsupported format '%s'", loader.opt.Type)
 	}
-	sort.Strings(domains)
+	// Define a Less function to sort based on the 'Rule' field
+	lessFunc := func(i, j int) bool {
+		return domains[i] < domains[j]
+	}
+
+	sort.Slice(domains, lessFunc)
 
 	Domains := []*router.Domain{}
 	for _, domain := range domains {
-		rules, err := parseDomainRule(domain)
+		rules, err := conf.ParseDomainRule(domain)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse domain rule: %s, err: %s", domain, err)
+			return nil, fmt.Errorf("failed to parse domain rule: %s, err: %S", domain, err)
 		}
 		Domains = append(Domains, rules...)
 	}

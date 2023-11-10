@@ -56,8 +56,7 @@ func (t *ipBlocklistTrie) removeNode(node *ipBlocklistNode, ip net.IP, bitIndex,
     return node
 }
 
-
-// Add a network to the trie.
+// Add a network to the trie with an identifier.
 func (t *ipBlocklistTrie) add(n *net.IPNet) {
 	if t.root == nil {
 		t.root = new(ipBlocklistNode)
@@ -89,8 +88,7 @@ func (t *ipBlocklistTrie) add(n *net.IPNet) {
 	p.leaf = true
 }
 
-// Returns true and the string representation of the network covering
-// the IP.
+// Returns true, the string representation of the network covering the IP, and the identifier.
 func (t *ipBlocklistTrie) hasIP(ip net.IP) (string, bool) {
 	if t.root == nil {
 		return "", false
@@ -104,7 +102,7 @@ func (t *ipBlocklistTrie) hasIP(ip net.IP) (string, bool) {
 	}
 	for i := 0; i < size; i++ {
 		if p.leaf {
-			return ruleString(ip, i), true
+			return ruleString(ip, i), true // برگرداندن شناسه در صورت وجود IP
 		}
 		b := bit(ip, i)
 		if b == 1 {
@@ -119,8 +117,76 @@ func (t *ipBlocklistTrie) hasIP(ip net.IP) (string, bool) {
 			p = p.left
 		}
 	}
+	// Todo Kontorol
 	return ruleString(ip, size), true
 }
+
+
+
+// // Add a network to the trie.
+// func (t *ipBlocklistTrie) add(n *net.IPNet) {
+// 	if t.root == nil {
+// 		t.root = new(ipBlocklistNode)
+// 	}
+// 	prefix, _ := n.Mask.Size()
+// 	p := t.root
+// 	for i := 0; i < prefix; i++ {
+// 		if p.leaf { // stop if we already have a shorter prefix than this
+// 			break
+// 		}
+// 		b := bit(n.IP, i)
+// 		if b == 1 {
+// 			if p.right == nil {
+// 				p.right = new(ipBlocklistNode)
+// 			}
+// 			p = p.right
+// 		} else {
+// 			if p.left == nil {
+// 				p.left = new(ipBlocklistNode)
+// 			}
+// 			p = p.left
+// 		}
+// 	}
+
+// 	// Mark this as the leaf-node. We care about the shortest prefix
+// 	// so nothing should go past this when building the trie
+// 	p.left = nil
+// 	p.right = nil
+// 	p.leaf = true
+// }
+
+// // Returns true and the string representation of the network covering
+// // the IP.
+// func (t *ipBlocklistTrie) hasIP(ip net.IP) (string, bool) {
+// 	if t.root == nil {
+// 		return "", false
+// 	}
+// 	p := t.root
+// 	size := 32
+// 	if addr := ip.To4(); addr == nil {
+// 		size = 128
+// 	} else {
+// 		ip = addr // make sure we use the 4-byte representation of an IPv4
+// 	}
+// 	for i := 0; i < size; i++ {
+// 		if p.leaf {
+// 			return ruleString(ip, i), true
+// 		}
+// 		b := bit(ip, i)
+// 		if b == 1 {
+// 			if p.right == nil {
+// 				return "", false
+// 			}
+// 			p = p.right
+// 		} else {
+// 			if p.left == nil {
+// 				return "", false
+// 			}
+// 			p = p.left
+// 		}
+// 	}
+// 	return ruleString(ip, size), true
+// }
 
 func ruleString(ip net.IP, maskBits int) string {
 	size := 32

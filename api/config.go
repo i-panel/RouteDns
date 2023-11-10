@@ -7,14 +7,13 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/XrayR-project/XrayR/api"
 	M "github.com/XrayR-project/XrayR/common/mylego"
 	rdns "github.com/folbricht/routedns"
 )
 
 type Config struct {
 	Title             string
-	TLS               bool
-	Enable            bool
 	BootstrapResolver resolver `toml:"bootstrap-resolver"`
 	Listeners         map[string]listener
 	Resolvers         map[string]resolver
@@ -124,20 +123,26 @@ type group struct {
 	Source    string   // Location of external blocklist, can be a local path or remote URL
 	Refresh   int      // Blocklist refresh when using an external source, in seconds
 
+	// Blocklist-panel options
+	Panel        api.Config `toml:"api"`
+	PanelRefresh int        `toml:"panel-refresh"`
+	// PanelResolvers []string
+
 	// Blocklist-v2 options
-	Filter            bool     // Filter response records rather than return NXDOMAIN
-	BlockListResolver string   `toml:"blocklist-resolver"`
-	AllowListResolver string   `toml:"allowlist-resolver"`
-	BlocklistFormat   string   `toml:"blocklist-format"` // only used for static blocklists in the config
-	BlocklistSource   []list   `toml:"blocklist-source"`
-	BlocklistRefresh  int      `toml:"blocklist-refresh"`
-	Allowlist         []string // Rules to override the blocklist rules
-	AllowlistFormat   string   `toml:"allowlist-format"` // only used for static allowlists in the config
-	AllowlistSource   []list   `toml:"allowlist-source"`
-	AllowlistRefresh  int      `toml:"allowlist-refresh"`
-	LocationDB        string   `toml:"location-db"` // GeoIP database file for response blocklist. Default "/usr/share/GeoIP/GeoLite2-City.mmdb"
-	Inverted          bool     // Only allow IPs on the blocklist. Supported in response-blocklist-ip and response-blocklist-name
-	AllowRemoteIpDB   bool     `toml:"allow-remote-db"` // allow to get ip from remote
+	Filter              bool     // Filter response records rather than return NXDOMAIN
+	BlockListResolver   string   `toml:"blocklist-resolver"`
+	AllowListResolver   string   `toml:"allowlist-resolver"`
+	IpAllowListResolver string   `toml:"ip-allowlist-resolver"`
+	BlocklistFormat     string   `toml:"blocklist-format"` // only used for static blocklists in the config
+	BlocklistSource     []list   `toml:"blocklist-source"`
+	BlocklistRefresh    int      `toml:"blocklist-refresh"`
+	Allowlist           []string // Rules to override the blocklist rules
+	AllowlistFormat     string   `toml:"allowlist-format"` // only used for static allowlists in the config
+	AllowlistSource     []list   `toml:"allowlist-source"`
+	AllowlistRefresh    int      `toml:"allowlist-refresh"`
+	LocationDB          string   `toml:"location-db"` // GeoIP database file for response blocklist. Default "/usr/share/GeoIP/GeoLite2-City.mmdb"
+	Inverted            bool     // Only allow IPs on the blocklist. Supported in response-blocklist-ip and response-blocklist-name
+	AllowRemoteIpDB     bool     `toml:"allow-remote-db"` // allow to get ip from remote
 
 	// Static responder options
 	Answer   []string
@@ -179,6 +184,7 @@ type list struct {
 	Name         string
 	Format       string
 	Source       string
+	Panel        *api.Config
 	CacheDir     string `toml:"cache-dir"`     // Where to store copies of remote blocklists for faster startup
 	AllowFailure bool   `toml:"allow-failure"` // Don't fail on error and keep using the prior ruleset
 }

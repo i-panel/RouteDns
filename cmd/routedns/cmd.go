@@ -79,6 +79,9 @@ func start(opt options, args []string) error {
 	}
 
 	manager, err := config.GetPanelManager(opt.logLevel)
+	if err != nil {
+		return err
+	}
 
 	// Start the listeners
 	for _, l := range manager.Listeners {

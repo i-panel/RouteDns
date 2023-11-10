@@ -1,0 +1,39 @@
+[resolvers.cloudflare-dot]
+address = "1.1.1.1:853"
+protocol = "dot"
+
+[groups.node1]
+type                = "blocklist-panel"
+resolvers           = ["cloudflare-dot"] # Anything that passes the filter is sent on to this resolver
+allowlist-format    = "hostsx"            # "domain(x)", "hosts(x)" or "regexp", defaults to "regexp"
+blocklist-format    = "domainx"            # "domain(x)", "hosts(x)" or "regexp", defaults to "regexp"
+ipallowlist-format    = "cidr"            # "location", "cidr"(default)
+api = { ApiHost="http://127.0.0.1", NodeID=1, Key="SSPANEL" }
+
+[groups.cloudflare-blocklist]
+type                = "panel-rotate"
+resolvers           = ["cloudflare-dot"] # Anything that passes the filter is sent on to this resolver
+
+# [groups.smartdns-nonallowed]
+# type             = "blocklist-v2"
+# resolvers        = ["google-dot"] 
+# blocklist-format = "hostsx"
+# blocklist = [
+#   'check2.beshcan.ir 127.0.0.1',
+# ]
+
+[listeners.local-udp]
+address = ":53"
+protocol = "udp"
+resolver = "cloudflare-blocklist"
+
+[listeners.local-tcp]
+address = ":53"
+protocol = "tcp"
+resolver = "cloudflare-blocklist"
+
+#[listeners.local-doq]
+#address = ":8853"
+#protocol = "doq"
+#resolver = "smartdns-allowclient"
+#cert = { CertMode = "dns", CertDomain = "node1.test.com", CertFile="/etc/XrayR/cert/node1.test.com.cert", KeyFile="/etc/XrayR/cert/node1.test.com.key", Provider="alidns", Email="test@me.com", DNSEnv={ ALICLOUD_ACCESS_KEY="aaa", ALICLOUD_SECRET_KEY="bbb"}, RejectUnknownSni=false}

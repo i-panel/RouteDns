@@ -2,27 +2,34 @@ package rdns
 
 import (
 	"bufio"
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/XrayR-project/XrayR/api"
+	"github.com/XrayR-project/XrayR/api/sspanel"
 )
 
-// PanelLoader reads blocklist rules from a server via HTTP(S).
+// HTTPLoader reads blocklist rules from a server via HTTP(S).
 type PanelLoader struct {
-	url         string
+	API         *sspanel.APIClient
 	opt         PanelLoaderOptions
 	fromDisk    bool
 	lastSuccess []string
 }
 
-// PanelLoaderOptions holds options for HTTP blocklist loaders.
+// HTTPLoaderOptions holds options for HTTP blocklist loaders.
 type PanelLoaderOptions struct {
 	CacheDir string
+	BlocklistFormat string
+	AllowlistFormat string
+	NodeInfo      *api.NodeInfo
+	UserList      *[]api.UserInfo
+	// DB *PanelDB
+	Type string
 
 	// Don't fail when trying to load the list
 	AllowFailure bool
@@ -30,73 +37,87 @@ type PanelLoaderOptions struct {
 
 var _ BlocklistLoader = &PanelLoader{}
 
-const PanelTimeout = 30 * time.Minute
+// const httpTimeout = 30 * time.Minute
 
-func NewPanelLoader(url string, opt PanelLoaderOptions) *PanelLoader {
-	return &PanelLoader{url, opt, opt.CacheDir != "", nil}
+func NewPanelLoader(api *sspanel.APIClient, opt PanelLoaderOptions) *PanelLoader {
+	return &PanelLoader{api, opt, opt.CacheDir != "", nil}
 }
 
 func (l *PanelLoader) Load() (rules []string, err error) {
-	log := Log.WithField("url", l.url)
+	return rules, nil
+}
+
+func getDB(name, Type string, loader *PanelLoader) (BlocklistDB, error) {
+
+	var (
+		db  BlocklistDB
+		err error
+		Format string
+	)
+
+	switch Type {
+	case "allow":
+		Format = loader.opt.AllowlistFormat
+	case "block":
+		Format = loader.opt.BlocklistFormat
+	default:
+		return nil, fmt.Errorf("unsupported format '%s'", Format)
+	}
+	loader.opt.Type =Type
+	
+	switch Format {
+	case "domainx":
+		db, err = NewDomainXDB(name, loader)
+	case "hostsx":
+		db, err = NewHostsXDB(name, loader)
+	default:
+		return nil, fmt.Errorf("unsupported format '%s'", Format)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func (l *PanelLoader) Get() (RouteDNS *PanelDB, err error) {
+	log := Log.WithField("NodeID", l.API.NodeID)
 	log.Trace("loading blocklist")
 
-	// If AllowFailure is enabled, return the last successfully loaded list
-	// and nil
-	defer func() {
-		if err != nil && l.opt.AllowFailure {
-			log.WithError(err).Warn("failed to load blocklist, continuing with previous ruleset")
-			rules = l.lastSuccess
-			err = nil
-		} else {
-			l.lastSuccess = rules
-		}
-	}()
-
-	// If a cache-dir was given, try to load the list from disk on first load
-	if l.fromDisk {
-		start := time.Now()
-		l.fromDisk = false
-		rules, err := l.loadFromDisk()
-		if err == nil {
-			log.WithField("load-time", time.Since(start)).Trace("loaded blocklist from cache-dir")
-			return rules, err
-		}
-		log.WithError(err).Warn("unable to load cached list from disk, loading from upstream")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), httpTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", l.url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("got unexpected status code %d from %s", resp.StatusCode, l.url)
-	}
-
 	start := time.Now()
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		rules = append(rules, scanner.Text())
+	
+	l.API.NodeType = "Http"
+	Nodes, err := l.API.GetNodeInfo()
+	if err !=nil {
+		return nil, err
 	}
+	l.opt.NodeInfo = Nodes
+
+	userList, err := l.API.GetUserList()
+	if err !=nil {
+		return nil, err
+	}
+	l.opt.UserList = userList
+
+	AllowlistDB, err := getDB("name-here", "allow", l)
+	if err != nil {
+		return nil, err
+	}
+	BlocklistDB, err := getDB("name-here", "block", l)
+	if err != nil {
+		return nil, err
+	}
+	IPAllowlistDB, err := NewCidrDBX("name-here", l)
+	if err != nil {
+		return nil, err
+	}
+
 	log.WithField("load-time", time.Since(start)).Trace("completed loading blocklist")
 
-	// Cache the content to disk if the read from the remote server was successful
-	if scanner.Err() == nil && l.opt.CacheDir != "" {
-		log.Trace("writing rules to cache-dir")
-		if err := l.writeToDisk(rules); err != nil {
-			log.WithError(err).Error("failed to write rules to cache")
-		}
-	}
-	return rules, scanner.Err()
+	return &PanelDB{
+		AllowlistDB:   AllowlistDB,
+		BlocklistDB:   BlocklistDB,
+		IpAllowlistDB: IPAllowlistDB,
+	}, nil
 }
 
 // Loads a cached version of the list from disk. The filename is made by hashing the URL with SHA256
@@ -143,6 +164,6 @@ func (l *PanelLoader) writeToDisk(rules []string) (err error) {
 
 // Returns the name of the list cache file, which is the SHA265 of url in the cache-dir.
 func (l *PanelLoader) cacheFilename() string {
-	name := fmt.Sprintf("%x", sha256.Sum256([]byte(l.url)))
+	name := fmt.Sprintf("%x", sha256.Sum256([]byte("")))
 	return filepath.Join(l.opt.CacheDir, name)
 }

@@ -14,8 +14,8 @@ import (
 )
 
 type Manager struct {
+	Enable    bool
 	Running   bool
-	Config    *Config
 	Listeners []rdns.Listener
 	// Map to hold all the resolvers extracted from the config, key'ed by resolver ID. It
 	// holds configured resolvers, groups, as well as routers (since they all implement
@@ -124,6 +124,35 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 	// Instantiate the elements from leaves to the root nodes
 	for graph.GetOrder() > 0 {
 		leaves := graph.GetLeaves()
+		var pgm []string
+		for id, v := range leaves {
+			node := v.(*Node)
+			if g, ok := node.value.(group); ok {
+				if g.Type == "blocklist-panel" {
+					pgm = append(pgm, id)
+					break
+				}
+			}
+		}
+		if len(pgm) > 0 {
+			var pm []group
+			for _, v := range leaves {
+				node := v.(*Node)
+				if g, ok := node.value.(group); ok {
+					if g.Type == "panel-rotate" {
+						pm = append(pm, g)
+					}
+				}
+			}
+			if len(pm) == 0 {
+				return nil, fmt.Errorf("%d blocklist-panel found but panel-rotate not found", len(pgm))
+			} else if len(pm) > 1 {
+				return nil, fmt.Errorf("currently only one panel-rotate is supported, found %d", len(pgm))
+			}
+		}
+
+		
+
 		for id, v := range leaves {
 			node := v.(*Node)
 			if r, ok := node.value.(resolver); ok {
@@ -132,7 +161,7 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 				}
 			}
 			if g, ok := node.value.(group); ok {
-				if err := instantiateGroup(id, g, resolvers); err != nil {
+				if err := instantiateGroup(id, g, resolvers, pgm); err != nil {
 					return nil, err
 				}
 			}
@@ -254,7 +283,6 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 
 	return &Manager{
 		Running:   false,
-		Config:    config,
 		Listeners: listeners,
 		Resolvers: resolvers,
 		Graph:     graph,

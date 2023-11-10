@@ -1,65 +1,22 @@
 package api
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
-	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
 	syslog "github.com/RackSec/srslog"
+	"github.com/XrayR-project/XrayR/api/sspanel"
 	rdns "github.com/folbricht/routedns"
 	"github.com/heimdalr/dag"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 type options struct {
 	logLevel uint32
 	version  bool
-}
-
-func main() {
-	var opt options
-	cmd := &cobra.Command{
-		Use:   "routedns <config> [<config>..]",
-		Short: "DNS stub resolver, proxy and router",
-		Long: `DNS stub resolver, proxy and router.
-
-Listens for incoming DNS requests, routes, modifies and
-forwards to upstream resolvers. Supports plain DNS over
-UDP and TCP as well as DNS-over-TLS and DNS-over-HTTPS
-as listener and client protocols.
-
-Routes can be defined to send requests for certain queries;
-by record type, query name or client-IP to different modifiers
-or upstream resolvers.
-
-Configuration can be split over multiple files with listeners,
-groups and routers defined in different files and provided as
-arguments.
-`,
-		Example: `  routedns config.toml`,
-		Args:    cobra.MinimumNArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return start(opt, args)
-		},
-		SilenceUsage: true,
-	}
-
-	cmd.Flags().Uint32VarP(&opt.logLevel, "log-level", "l", 4, "log level; 0=None .. 6=Trace")
-	cmd.Flags().BoolVarP(&opt.version, "version", "v", false, "Prints code version string")
-
-	if err := cmd.Execute(); err != nil {
-		os.Exit(1)
-	}
-
 }
 
 type Node struct {
@@ -76,243 +33,12 @@ func (n Node) ID() string {
 // Functions to call on shutdown
 var onClose []func()
 
-func start(opt options, args []string) error {
-	// Set the log level in the library package
-	if opt.logLevel > 6 {
-		return fmt.Errorf("invalid log level: %d", opt.logLevel)
-	}
-	if opt.version {
-		printVersion()
-		os.Exit(0)
-	} else {
-		if len(args) < 1 {
-			return errors.New("not enough arguments")
-		}
 
-	}
-	rdns.Log.SetLevel(logrus.Level(opt.logLevel))
-
-	config, err := LoadConfig(args...)
-	if err != nil {
-		return err
-	}
-
-	// Map to hold all the resolvers extracted from the config, key'ed by resolver ID. It
-	// holds configured resolvers, groups, as well as routers (since they all implement
-	// rdns.Resolver)
-	resolvers := make(map[string]rdns.Resolver)
-
-	// See if a bootstrap-resolver was defined in the config. If so, instantiate it,
-	// wrap it in a net.Resolver wrapper and replace the net.DefaultResolver with it
-	// for all other entities to use.
-	if config.BootstrapResolver.Address != "" {
-		if err := instantiateResolver("bootstrap-resolver", config.BootstrapResolver, resolvers); err != nil {
-			return fmt.Errorf("failed to instantiate bootstrap-resolver: %w", err)
-		}
-		net.DefaultResolver = rdns.NewNetResolver(resolvers["bootstrap-resolver"])
-	}
-	// Add all types of nodes to a DAG, this is to find duplicates. Then populate the edges (dependencies).
-	graph := dag.NewDAG()
-	edges := make(map[string][]string)
-	for id, v := range config.Resolvers {
-		node := &Node{id, v}
-		_, err := graph.AddVertex(node)
-		if err != nil {
-			return err
-		}
-	}
-	for id, v := range config.Groups {
-		node := &Node{id, v}
-		_, err := graph.AddVertex(node)
-		if err != nil {
-			return err
-		}
-		edges[id] = append(v.Resolvers, v.AllowListResolver, v.BlockListResolver, v.LimitResolver, v.RetryResolver)
-	}
-	for id, v := range config.Routers {
-		node := &Node{id, v}
-		_, err := graph.AddVertex(node)
-		if err != nil {
-			return err
-		}
-		// One router can have multiple edges to the same resolver.
-		// Dedup them before adding to the list of edges.
-		dep := make(map[string]struct{})
-		for _, route := range v.Routes {
-			dep[route.Resolver] = struct{}{}
-		}
-		for r := range dep {
-			edges[id] = append(edges[id], r)
-		}
-	}
-	// Add the edges to the DAG. This will fail if there are duplicate edges, recursion or missing nodes
-	for id, es := range edges {
-		for _, e := range es {
-			if e == "" {
-				continue
-			}
-			if err := graph.AddEdge(id, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Instantiate the elements from leaves to the root nodes
-	for graph.GetOrder() > 0 {
-		leaves := graph.GetLeaves()
-		for id, v := range leaves {
-			node := v.(*Node)
-			if r, ok := node.value.(resolver); ok {
-				if err := instantiateResolver(id, r, resolvers); err != nil {
-					return err
-				}
-			}
-			if g, ok := node.value.(group); ok {
-				if err := instantiateGroup(id, g, resolvers); err != nil {
-					return err
-				}
-			}
-			if r, ok := node.value.(router); ok {
-				if err := instantiateRouter(id, r, resolvers); err != nil {
-					return err
-				}
-			}
-			if err := graph.DeleteVertex(id); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Build the Listeners last as they can point to routers, groups or resolvers directly.
-	var listeners []rdns.Listener
-	for id, l := range config.Listeners {
-		resolver, ok := resolvers[l.Resolver]
-		// All Listeners should route queries (except the admin service).
-		if !ok && l.Protocol != "admin" {
-			return fmt.Errorf("listener '%s' references non-existent resolver, group or router '%s'", id, l.Resolver)
-		}
-		allowedNet, err := parseCIDRList(l.AllowedNet)
-		if err != nil {
-			return err
-		}
-
-		opt := rdns.ListenOptions{AllowedNet: allowedNet}
-
-		switch l.Protocol {
-		case "tcp":
-			l.Address = rdns.AddressWithDefault(l.Address, rdns.PlainDNSPort)
-			listeners = append(listeners, rdns.NewDNSListener(id, l.Address, "tcp", opt, resolver))
-		case "udp":
-			l.Address = rdns.AddressWithDefault(l.Address, rdns.PlainDNSPort)
-			listeners = append(listeners, rdns.NewDNSListener(id, l.Address, "udp", opt, resolver))
-		case "admin":
-			tlsConfig, err := rdns.TLSServerConfig(l.CA, l.ServerCrt, l.ServerKey, l.MutualTLS)
-			if err != nil {
-				return err
-			}
-			opt := rdns.AdminListenerOptions{
-				TLSConfig:     tlsConfig,
-				ListenOptions: opt,
-				Transport:     l.Transport,
-			}
-			ln, err := rdns.NewAdminListener(id, l.Address, opt)
-			if err != nil {
-				return err
-			}
-			listeners = append(listeners, ln)
-		case "dot":
-			l.Address = rdns.AddressWithDefault(l.Address, rdns.DoTPort)
-			tlsConfig, err := rdns.TLSServerConfig(l.CA, l.ServerCrt, l.ServerKey, l.MutualTLS)
-			if err != nil {
-				return err
-			}
-			ln := rdns.NewDoTListener(id, l.Address, rdns.DoTListenerOptions{TLSConfig: tlsConfig, ListenOptions: opt}, resolver)
-			listeners = append(listeners, ln)
-		case "dtls":
-			l.Address = rdns.AddressWithDefault(l.Address, rdns.DTLSPort)
-			dtlsConfig, err := GetDTLSServerConfig(&l)
-			if err != nil {
-				return err
-			}
-			ln := rdns.NewDTLSListener(id, l.Address, rdns.DTLSListenerOptions{DTLSConfig: dtlsConfig, ListenOptions: opt}, resolver)
-			listeners = append(listeners, ln)
-		case "doh":
-			if l.Transport != "quic" {
-				l.Address = rdns.AddressWithDefault(l.Address, rdns.DoHPort)
-			} else if l.Transport == "quic" {
-				l.Address = rdns.AddressWithDefault(l.Address, rdns.DohQuicPort)
-			}
-			var tlsConfig *tls.Config
-			if l.NoTLS {
-				if l.Transport == "quic" {
-					return errors.New("no-tls is not supported for doh servers with quic transport")
-				}
-			} else {
-				fmt.Println("p4")
-				tlsConfig, err = rdns.TLSServerConfig(l.CA, l.ServerCrt, l.ServerKey, l.MutualTLS)
-				if err != nil {
-					return err
-				}
-			}
-			var httpProxyNet *net.IPNet
-			if l.Frontend.HTTPProxyNet != "" {
-				_, httpProxyNet, err = net.ParseCIDR(l.Frontend.HTTPProxyNet)
-				if err != nil {
-					return fmt.Errorf("listener '%s' trusted-proxy '%s': %v", id, l.Frontend.HTTPProxyNet, err)
-				}
-			}
-			opt := rdns.DoHListenerOptions{
-				TLSConfig:     tlsConfig,
-				ListenOptions: opt,
-				Transport:     l.Transport,
-				HTTPProxyNet:  httpProxyNet,
-				NoTLS:         l.NoTLS,
-			}
-			ln, err := rdns.NewDoHListener(id, l.Address, opt, resolver)
-			if err != nil {
-				return err
-			}
-			listeners = append(listeners, ln)
-		case "doq":
-			l.Address = rdns.AddressWithDefault(l.Address, rdns.DoQPort)
-
-			tlsConfig, err := rdns.TLSServerConfig(l.CA, l.ServerCrt, l.ServerKey, l.MutualTLS)
-			if err != nil {
-				return err
-			}
-			ln := rdns.NewQUICListener(id, l.Address, rdns.DoQListenerOptions{TLSConfig: tlsConfig, ListenOptions: opt}, resolver)
-			listeners = append(listeners, ln)
-		default:
-			return fmt.Errorf("unsupported protocol '%s' for listener '%s'", l.Protocol, id)
-		}
-	}
-
-	// Start the listeners
-	for _, l := range listeners {
-		go func(l rdns.Listener) {
-			for {
-				err := l.Start()
-				rdns.Log.WithError(err).Error("listener failed")
-				time.Sleep(time.Second)
-			}
-		}(l)
-	}
-
-	// Graceful shutdown
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	<-sig
-	rdns.Log.Info("stopping")
-	for _, f := range onClose {
-		f()
-	}
-
-	return nil
-}
 
 // Instantiate a group object based on configuration and add to the map of resolvers by ID.
-func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver) error {
+func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver, pnr []string) error {
 	var gr []rdns.Resolver
+	var pgr []rdns.Resolver
 	var err error
 	for _, rid := range g.Resolvers {
 		resolver, ok := resolvers[rid]
@@ -335,6 +61,18 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver) er
 			ServfailError: g.ServfailError,
 		}
 		resolvers[id] = rdns.NewFailBack(id, opt, gr...)
+	case "panel-rotate":
+		if len(gr) != 1 {
+			return fmt.Errorf("type panel-rotate only supports one resolver in '%s'", id)
+		}
+		for _, rid := range pnr {
+			pResolver, ok := resolvers[rid]
+			if !ok {
+				return fmt.Errorf("group '%s' references non-existent resolver or group '%s'", id, rid)
+			}
+			pgr = append(pgr, pResolver)
+		}
+		resolvers[id] = rdns.NewPanelRotate(id, gr[0], pgr...)
 	case "fastest":
 		resolvers[id] = rdns.NewFastest(id, gr...)
 	case "random":
@@ -421,6 +159,37 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver) er
 			AllowlistRefresh:  time.Duration(g.AllowlistRefresh) * time.Second,
 		}
 		resolvers[id], err = rdns.NewBlocklist(id, gr[0], opt)
+		if err != nil {
+			return err
+		}
+	case "blocklist-panel":
+		if len(gr) != 1 {
+			return fmt.Errorf("type blocklist-panel only supports one resolver in '%s'", id)
+		}
+
+		// if len(g.Allowlist) == 0 {
+		// 	return fmt.Errorf("type blocklist-panel only supports one resolver in '%s'", id)
+		// }
+
+		ApiClient := sspanel.New(&g.Panel)
+		loader := rdns.NewPanelLoader(ApiClient, rdns.PanelLoaderOptions{
+			AllowlistFormat: g.AllowlistFormat,
+			BlocklistFormat: g.BlocklistFormat,
+		})
+		panelDB, err := loader.Get()
+		if err != nil {
+			return err
+		}
+
+		opt := rdns.PanellistOptions{
+			Loader:              loader,
+			Refresh:             time.Duration(g.PanelRefresh) * time.Second,
+			DB:                  panelDB,
+			AllowListResolver:   resolvers[g.AllowListResolver],
+			BlockListResolver:   resolvers[g.BlockListResolver],
+			IpAllowListResolver: resolvers[g.IpAllowListResolver],
+		}
+		resolvers[id], err = rdns.NewPanellist(id, gr[0], opt)
 		if err != nil {
 			return err
 		}
@@ -883,10 +652,6 @@ func newBlocklistDB(l list, rules []string) (rdns.BlocklistDB, error) {
 		return rdns.NewRegexpDB(name, loader)
 	case "domain":
 		return rdns.NewDomainDB(name, loader)
-	case "domainx":
-		return rdns.NewDomainXDB(name, loader)
-	case "hostsx":
-		return rdns.NewHostsXDB(name, loader)
 	case "hosts":
 		return rdns.NewHostsDB(name, loader)
 	default:
