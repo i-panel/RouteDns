@@ -313,3 +313,18 @@ func (r *Panellist) refreshLoop(refresh time.Duration) (err error) {
 		r.mu.Unlock()
 	}
 }
+
+// type Socks5PanelOptions struct {
+// 	Address string
+// 	Username   string
+// 	Password   string
+// 	UDPTimeout int
+// 	TCPTimeout int
+// 	LocalAddr  string
+
+// 	// When the resolver is configured with a name, not an IP, e.g. one.one.one.one:53
+// 	// this setting will resolve that name locally rather than on the SOCKS proxy. The
+// 	// name will be resolved either on the local system, or via the bootstrap-resolver
+// 	// if one is setup.
+// 	ResolveLocal bool
+// }

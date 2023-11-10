@@ -212,14 +212,6 @@ func (r *Blocklist) String() string {
 	return r.id
 }
 
-func (r *Blocklist) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *Blocklist) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}
-
-
 func (r *Blocklist) refreshLoopBlocklist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)
@@ -235,6 +227,7 @@ func (r *Blocklist) refreshLoopBlocklist(refresh time.Duration) {
 		r.mu.Unlock()
 	}
 }
+
 func (r *Blocklist) refreshLoopAllowlist(refresh time.Duration) {
 	for {
 		time.Sleep(refresh)

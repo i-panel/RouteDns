@@ -48,10 +48,3 @@ func (r *TruncateRetry) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *TruncateRetry) String() string {
 	return r.id
 }
-
-func (r *TruncateRetry) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *TruncateRetry) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}

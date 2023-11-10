@@ -43,13 +43,6 @@ func (r *EDNS0Modifier) String() string {
 	return r.id
 }
 
-func (r *EDNS0Modifier) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *EDNS0Modifier) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}
-
 func EDNS0ModifierDelete(code uint16) EDNS0ModifierFunc {
 	return func(q *dns.Msg, ci ClientInfo) {
 		edns0 := q.IsEdns0()

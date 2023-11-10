@@ -127,13 +127,6 @@ func (r *requestDedup) String() string {
 	return r.id
 }
 
-func (r *requestDedup) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *requestDedup) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}
-
 func byteToUint128(b []byte) (uint64, uint64) {
 	if len(b) != 16 {
 		return 0, 0

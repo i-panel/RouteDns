@@ -34,10 +34,3 @@ func (r *ResponseMinimize) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) 
 func (r *ResponseMinimize) String() string {
 	return r.id
 }
-
-func (r *ResponseMinimize) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *ResponseMinimize) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}

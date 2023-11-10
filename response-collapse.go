@@ -56,10 +56,3 @@ func (r *ResponseCollapse) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) 
 func (r *ResponseCollapse) String() string {
 	return r.id
 }
-
-func (r *ResponseCollapse) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *ResponseCollapse) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}

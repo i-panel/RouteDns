@@ -66,10 +66,3 @@ func (r *Fastest) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *Fastest) String() string {
 	return r.id
 }
-
-func (r *Fastest) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *Fastest) GetIPBlocklistDB() IPBlocklistDB {
-	return nil
-}

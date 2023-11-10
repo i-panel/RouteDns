@@ -85,10 +85,3 @@ func (r *Router) Add(routes ...*route) {
 func (r *Router) String() string {
 	return r.id
 }
-
-func (r *Router) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *Router) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}

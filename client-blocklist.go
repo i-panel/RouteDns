@@ -70,12 +70,6 @@ func (r *ClientBlocklist) String() string {
 	return r.id
 }
 
-func (r *ClientBlocklist) SetIPBlocklistDB(db IPBlocklistDB) {
-	if r.ClientBlocklistOptions.AllowRemote {
-		r.ClientBlocklistOptions.BlocklistDB = db
-	}
-}
-
 func (r *ClientBlocklist) GetIPBlocklistDB() IPBlocklistDB {
 		return r.ClientBlocklistOptions.BlocklistDB
 }

@@ -84,10 +84,3 @@ func (r *StaticResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *StaticResolver) String() string {
 	return r.id
 }
-
-func (r *StaticResolver) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *StaticResolver) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}

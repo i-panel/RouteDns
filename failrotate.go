@@ -68,13 +68,6 @@ func (r *FailRotate) String() string {
 	return r.id
 }
 
-func (r *FailRotate) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *FailRotate) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}
-
 // Thread-safe method to return the currently active resolver.
 func (r *FailRotate) current() (Resolver, int) {
 	r.mu.RLock()

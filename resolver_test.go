@@ -46,6 +46,3 @@ func (r *TestResolver) HitCount() int {
 func (r *TestResolver) SetFail(f bool) {
 	r.shouldFail = f
 }
-
-func (r *TestResolver) SetIPBlocklistDB(db IPBlocklistDB) {
-}

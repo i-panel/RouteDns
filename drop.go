@@ -26,10 +26,3 @@ func (r *DropResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 func (r *DropResolver) String() string {
 	return r.id
 }
-
-func (r *DropResolver) SetIPBlocklistDB(db IPBlocklistDB) {
-}
-
-func (r *DropResolver) GetIPBlocklistDB() (IPBlocklistDB) {
-	return nil
-}
