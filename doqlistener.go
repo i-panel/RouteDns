@@ -5,10 +5,13 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"expvar"
+	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	quic "github.com/quic-go/quic-go"
 	"github.com/sirupsen/logrus"
@@ -23,6 +26,8 @@ type DoQListener struct {
 	ln      *quic.Listener
 	log     *logrus.Entry
 	metrics *DoQListenerMetrics
+	Lego *mylego.CertConfig
+	MutualTLS bool
 }
 
 var _ Listener = &DoQListener{}
@@ -54,6 +59,40 @@ func NewDoQListenerMetrics(id string) *DoQListenerMetrics {
 		connection: getVarInt("listener", id, "session"),
 		stream:     getVarInt("listener", id, "stream"),
 	}
+}
+
+func (s *DoQListener) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		_, _, _, _, err = lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		cert, key, ca, err := GetCertFile(s.Lego)
+		if err != nil {
+			fmt.Print(err)
+		}
+	
+		tlsConfig, err := TLSServerConfig(ca, cert, key, s.MutualTLS)
+		if err != nil {
+			return err
+		}		
+		s.opt.TLSConfig = tlsConfig
+		err = s.Stop()
+		if err != nil {
+			fmt.Printf("failed to stop DTLS listener %s, err: %s", s.id,err)
+		}
+		err = s.Start()
+		if err != nil {
+			fmt.Printf("failed to start DTLS listener %s, err: %s", s.id,err)
+		}
+	}
+	return nil
 }
 
 // NewQuicListener returns an instance of a QUIC listener.
@@ -189,7 +228,7 @@ func (s DoQListener) handleStream(stream quic.Stream, log *logrus.Entry, ci Clie
 	}
 
 	// Resolve the query using the next hop
-	a, err := s.r.Resolve(q, ci)
+	a, err := s.r.Resolve(q, ci, nil)
 	if err != nil {
 		log.WithError(err).Error("failed to resolve")
 		a = new(dns.Msg)

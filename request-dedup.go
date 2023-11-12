@@ -44,7 +44,7 @@ func NewRequestDedup(id string, resolver Resolver) *requestDedup {
 	}
 }
 
-func (r *requestDedup) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *requestDedup) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	var (
 		ecsIPv4              uint32
 		ecsIPv6Lo, ecsIPv6Hi uint64
@@ -105,7 +105,7 @@ func (r *requestDedup) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	log.WithField("resolver", r.resolver).Debug("forwarding query to resolver")
 
 	// Not already in flight, make the request
-	a, err := r.resolver.Resolve(q, ci)
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	req.answer = a
 	req.err = err
 	close(req.done) // release other goroutines waiting for the response
@@ -125,6 +125,11 @@ func (r *requestDedup) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *requestDedup) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *requestDedup) CertMonitor() error {
+	return nil
 }
 
 func byteToUint128(b []byte) (uint64, uint64) {

@@ -10,6 +10,7 @@ import (
 type Listener interface {
 	Start() error
 	Stop() error
+	CertMonitor() error
 	fmt.Stringer
 }
 

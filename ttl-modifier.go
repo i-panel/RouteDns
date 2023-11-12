@@ -46,8 +46,8 @@ func NewTTLModifier(id string, resolver Resolver, opt TTLModifierOptions) *TTLMo
 
 // Resolve a DNS query by first resoling it upstream, then applying TTL limits
 // on the response.
-func (r *TTLModifier) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	a, err := r.resolver.Resolve(q, ci)
+func (r *TTLModifier) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || a == nil {
 		return a, err
 	}
@@ -77,6 +77,11 @@ func (r *TTLModifier) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *TTLModifier) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *TTLModifier) CertMonitor() error {
+	return nil
 }
 
 // TTLSelectLowest is a function for the TTL Modifier that sets the TTL

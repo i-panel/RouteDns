@@ -19,9 +19,9 @@ func TestFailBack(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Send the first couple of queries. The first resolver should be active and be used for both
-	_, err := g.Resolve(q, ci)
+	_, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, r1.HitCount())
 	require.Equal(t, 0, r2.HitCount())
@@ -30,7 +30,7 @@ func TestFailBack(t *testing.T) {
 	r1.SetFail(true)
 
 	// The next one should hit both stores (1st will fail, 2nd succeed)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 3, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -40,9 +40,9 @@ func TestFailBack(t *testing.T) {
 	time.Sleep(time.Second + 100*time.Millisecond)
 
 	// It should have been reset and the first should be active again now
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 5, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -64,7 +64,7 @@ func TestFailBackSERVFAIL(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Send the first query, the first resolver will return SERVFAIL and the request will go to the 2nd
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r2.HitCount())
 }
@@ -79,7 +79,7 @@ func TestFailBackDrop(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// The query should be dropped, so no failover
-	_, err := g.Resolve(q, ci)
+	_, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r2.HitCount())
 }
@@ -97,7 +97,7 @@ func TestFailBackSERVFAILAll(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("test.com.", dns.TypeA)
 
-	a, err := g.Resolve(q, ci)
+	a, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, dns.RcodeServerFailure, a.Rcode)
 }
@@ -117,7 +117,7 @@ func TestFailBackServfailOKOption(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("test.com.", dns.TypeA)
 
-	a, err := g1.Resolve(q, ci)
+	a, err := g1.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, dns.RcodeServerFailure, a.Rcode)
 	require.Equal(t, 0, goodResolver.hitCount)
@@ -125,7 +125,7 @@ func TestFailBackServfailOKOption(t *testing.T) {
 	// With ServfailError == true
 	g2 := NewFailBack("test-fb", FailBackOptions{ServfailError: true}, failResolver, goodResolver)
 
-	a, err = g2.Resolve(q, ci)
+	a, err = g2.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, dns.RcodeServerFailure, a.Rcode)
 	require.Equal(t, 1, goodResolver.hitCount)

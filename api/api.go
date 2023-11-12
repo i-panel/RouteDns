@@ -5,13 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	rdns "github.com/folbricht/routedns"
 	"github.com/heimdalr/dag"
 	"github.com/pion/dtls/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/xtls/xray-core/common/task"
 )
+
+type periodicTask struct {
+	Tag string
+	*task.Periodic
+}
 
 type Manager struct {
 	Enable    bool
@@ -24,30 +31,31 @@ type Manager struct {
 	Edges     map[string][]string
 	Graph     *dag.DAG
 	OnClose   []func()
+	Tasks     []periodicTask
 }
 
 func GetDTLSServerConfig(l *listener) (*dtls.Config, error) {
-	cert, key, err := rdns.GetCertFile(&l.Lego)
+	cert, key, ca, err := rdns.GetCertFile(&l.Lego)
 	if err != nil {
 		return nil, err
 	}
-	return rdns.DTLSServerConfig("", cert, key, l.MutualTLS)
+	return rdns.DTLSServerConfig(ca, cert, key, l.MutualTLS)
 }
 
 func GetTLSServerConfig(l *listener) (*tls.Config, error) {
-	cert, key, err := rdns.GetCertFile(&l.Lego)
+	cert, key, ca, err := rdns.GetCertFile(&l.Lego)
 	if err != nil {
 		return nil, err
 	}
-	return rdns.TLSServerConfig("", cert, key, l.MutualTLS)
+	return rdns.TLSServerConfig(ca, cert, key, l.MutualTLS)
 }
 
 func GetTLSClientConfig(r *resolver) (*tls.Config, error) {
-	cert, key, err := rdns.GetCertFile(&r.Lego)
+	cert, key, ca, err := rdns.GetCertFile(&r.Lego)
 	if err != nil {
 		return nil, err
 	}
-	return rdns.TLSClientConfig("", cert, key, r.ServerName)
+	return rdns.TLSClientConfig(ca, cert, key, r.ServerName)
 }
 
 func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
@@ -59,12 +67,23 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 		return nil, errors.New("not enough arguments")
 	}
 
+	pwd, wdErr := os.Getwd()
+	if wdErr != nil {
+		return nil, fmt.Errorf("can not get current working directory")
+	}
+
+	err := os.Setenv("XRAY_LOCATION_ASSET", pwd)
+	if err != nil {
+		return nil, fmt.Errorf("could not set asset working directory., error: %s", err)
+	}
+
 	rdns.Log.SetLevel(logrus.Level(logLevel))
 
 	// Map to hold all the resolvers extracted from the config, key'ed by resolver ID. It
 	// holds configured resolvers, groups, as well as routers (since they all implement
 	// rdns.Resolver)
 	resolvers := make(map[string]rdns.Resolver)
+	var tasks []periodicTask
 
 	// See if a bootstrap-resolver was defined in the config. If so, instantiate it,
 	// wrap it in a net.Resolver wrapper and replace the net.DefaultResolver with it
@@ -74,6 +93,14 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			return nil, fmt.Errorf("failed to instantiate bootstrap-resolver: %w", err)
 		}
 		net.DefaultResolver = rdns.NewNetResolver(resolvers["bootstrap-resolver"])
+		if config.BootstrapResolver.Lego.CertMode != "" && config.BootstrapResolver.Lego.CertMode != "none" {
+			tasks = append(tasks, periodicTask{
+				Tag: "cert monitor",
+				Periodic: &task.Periodic{
+					Interval: time.Duration(config.BootstrapResolver.Lego.UpdatePeriodic) * time.Second * 60,
+					Execute:  resolvers["bootstrap-resolver"].CertMonitor,
+				}})
+		}
 	}
 	// Add all types of nodes to a DAG, this is to find duplicates. Then populate the edges (dependencies).
 	graph := dag.NewDAG()
@@ -151,13 +178,19 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			}
 		}
 
-		
-
 		for id, v := range leaves {
 			node := v.(*Node)
 			if r, ok := node.value.(resolver); ok {
 				if err := instantiateResolver(id, r, resolvers); err != nil {
 					return nil, err
+				}
+				if r.Lego.CertMode != "" && r.Lego.CertMode != "none" {
+					tasks = append(tasks, periodicTask{
+						Tag: "cert monitor",
+						Periodic: &task.Periodic{
+							Interval: time.Duration(r.Lego.UpdatePeriodic) * time.Second * 60,
+							Execute:  resolvers[id].CertMonitor,
+						}})
 				}
 			}
 			if g, ok := node.value.(group); ok {
@@ -194,10 +227,31 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 		switch l.Protocol {
 		case "tcp":
 			l.Address = rdns.AddressWithDefault(l.Address, rdns.PlainDNSPort)
-			listeners = append(listeners, rdns.NewDNSListener(id, l.Address, "tcp", opt, resolver))
+			listener := rdns.NewDNSListener(id, l.Address, "tcp", opt, resolver)
+			listeners = append(listeners, listener)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  listener.CertMonitor,
+					},
+				})
+			}
+			
 		case "udp":
 			l.Address = rdns.AddressWithDefault(l.Address, rdns.PlainDNSPort)
-			listeners = append(listeners, rdns.NewDNSListener(id, l.Address, "udp", opt, resolver))
+			listener := rdns.NewDNSListener(id, l.Address, "udp", opt, resolver)
+			listeners = append(listeners, listener)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  listener.CertMonitor,
+					},
+				})
+			}
 		case "admin":
 			tlsConfig, err := GetTLSServerConfig(&l)
 			// tlsConfig, err := rdns.TLSServerConfig(l.CA, l.ServerCrt, l.ServerKey, l.MutualTLS)
@@ -213,7 +267,18 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			if err != nil {
 				return nil, err
 			}
+			ln.Lego = &l.Lego
+			ln.MutualTLS = l.MutualTLS
 			listeners = append(listeners, ln)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  ln.CertMonitor,
+					},
+				})
+			}
 		case "dot":
 			l.Address = rdns.AddressWithDefault(l.Address, rdns.DoTPort)
 			tlsConfig, err := GetTLSServerConfig(&l)
@@ -221,15 +286,36 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 				return nil, err
 			}
 			ln := rdns.NewDoTListener(id, l.Address, rdns.DoTListenerOptions{TLSConfig: tlsConfig, ListenOptions: opt}, resolver)
+			ln.Lego = &l.Lego
+			ln.MutualTLS = l.MutualTLS
 			listeners = append(listeners, ln)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  ln.CertMonitor,
+					},
+				})
+			}
 		case "dtls":
 			l.Address = rdns.AddressWithDefault(l.Address, rdns.DTLSPort)
 			dtlsConfig, err := GetDTLSServerConfig(&l)
 			if err != nil {
 				return nil, err
 			}
-			ln := rdns.NewDTLSListener(id, l.Address, rdns.DTLSListenerOptions{DTLSConfig: dtlsConfig, ListenOptions: opt}, resolver)
+			ln := rdns.NewDTLSListener(id, l.Address, rdns.DTLSListenerOptions{DTLSConfig: dtlsConfig, ListenOptions: opt, MutualTLS: l.MutualTLS}, resolver)
+			ln.Lego = &l.Lego
 			listeners = append(listeners, ln)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  ln.CertMonitor,
+					},
+				})
+			}
 		case "doh":
 			if l.Transport != "quic" {
 				l.Address = rdns.AddressWithDefault(l.Address, rdns.DoHPort)
@@ -266,7 +352,18 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			if err != nil {
 				return nil, err
 			}
+			ln.Lego = &l.Lego
+			ln.MutualTLS = l.MutualTLS
 			listeners = append(listeners, ln)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  ln.CertMonitor,
+					},
+				})
+			}
 		case "doq":
 			l.Address = rdns.AddressWithDefault(l.Address, rdns.DoQPort)
 
@@ -275,7 +372,18 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 				return nil, err
 			}
 			ln := rdns.NewQUICListener(id, l.Address, rdns.DoQListenerOptions{TLSConfig: tlsConfig, ListenOptions: opt}, resolver)
+			ln.Lego = &l.Lego
+			ln.MutualTLS = l.MutualTLS
 			listeners = append(listeners, ln)
+			if l.Lego.CertMode != "" && l.Lego.CertMode != "none" {
+				tasks = append(tasks, periodicTask{
+					Tag: "cert monitor",
+					Periodic: &task.Periodic{
+						Interval: time.Duration(l.Lego.UpdatePeriodic) * time.Second * 60,
+						Execute:  ln.CertMonitor,
+					},
+				})
+			}
 		default:
 			return nil, fmt.Errorf("unsupported protocol '%s' for listener '%s'", l.Protocol, id)
 		}
@@ -288,6 +396,7 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 		Graph:     graph,
 		Edges:     edges,
 		OnClose:   onClose,
+		Tasks:     tasks,
 	}, nil
 }
 

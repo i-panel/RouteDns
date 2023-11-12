@@ -54,7 +54,7 @@ func NewReplace(id string, resolver Resolver, list ...ReplaceOperation) (*Replac
 // Resolve a DNS query by first replacing the query string with another
 // sending the query upstream and replace the name in the response with
 // the original query string again.
-func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if len(q.Question) < 1 {
 		return nil, errors.New("no question in query")
 	}
@@ -65,7 +65,7 @@ func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	// if nothing needs modifying, we can stop here and use the original query
 	if newName == oldName {
 		log.Debug("forwarding unmodified query to resolver")
-		return r.resolver.Resolve(q, ci)
+		return r.resolver.Resolve(q, ci, PanelSocksDialer)
 	}
 
 	// Modify the query string
@@ -73,7 +73,7 @@ func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 	// Send the query upstream
 	log.WithField("new-qname", newName).WithField("resolver", r.resolver).Debug("forwarding modified query to resolver")
-	a, err := r.resolver.Resolve(q, ci)
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || a == nil {
 		return nil, err
 	}
@@ -93,4 +93,9 @@ func (r *Replace) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Replace) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Replace) CertMonitor() error {
+	return nil
 }

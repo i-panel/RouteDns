@@ -84,7 +84,7 @@ func NewBlocklist(id string, resolver Resolver, opt BlocklistOptions) (*Blocklis
 
 // Resolve a DNS query by first checking the query against the provided matcher.
 // Queries that do not match are passed on to the next resolver.
-func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if len(q.Question) < 1 {
 		return nil, errors.New("no question in query")
 	}
@@ -103,7 +103,7 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 			r.metrics.allowed.Add(1)
 			if r.AllowListResolver != nil {
 				log.WithField("resolver", r.AllowListResolver.String()).Debug("matched allowlist, forwarding")
-				return r.AllowListResolver.Resolve(q, ci)
+				return r.AllowListResolver.Resolve(q, ci, PanelSocksDialer)
 			}
 
 			answer := new(dns.Msg)
@@ -139,7 +139,7 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 				return answer, nil
 			}
 			log.WithField("resolver", r.resolver.String()).Debug("matched allowlist, forwarding")
-			return r.resolver.Resolve(q, ci)
+			return r.resolver.Resolve(q, ci, PanelSocksDialer)
 		}
 	}
 
@@ -148,7 +148,7 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 		// Didn't match anything, pass it on to the next resolver
 		log.WithField("resolver", r.resolver.String()).Debug("forwarding unmodified query to resolver")
 		r.metrics.allowed.Add(1)
-		return r.resolver.Resolve(q, ci)
+		return r.resolver.Resolve(q, ci, PanelSocksDialer)
 	}
 	log = log.WithFields(logrus.Fields{"list": match.List, "rule": match.Rule})
 	r.metrics.blocked.Add(1)
@@ -165,7 +165,7 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	// If an optional blocklist-resolver was given, send the query to that instead of returning NXDOMAIN.
 	if r.BlocklistResolver != nil {
 		log.WithField("resolver", r.BlocklistResolver.String()).Debug("matched blocklist, forwarding")
-		return r.BlocklistResolver.Resolve(q, ci)
+		return r.BlocklistResolver.Resolve(q, ci, PanelSocksDialer)
 	}
 
 	answer := new(dns.Msg)
@@ -210,6 +210,11 @@ func (r *Blocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Blocklist) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Blocklist) CertMonitor() error {
+	return nil
 }
 
 func (r *Blocklist) refreshLoopBlocklist(refresh time.Duration) {

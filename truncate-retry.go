@@ -31,8 +31,8 @@ func NewTruncateRetry(id string, resolver, retryResolver Resolver, opt TruncateR
 
 // Resolve a DNS query by first resoling it upstream, if the response is truncated, the
 // retry resolver is used to resolve the same query again.
-func (r *TruncateRetry) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	a, err := r.resolver.Resolve(q, ci)
+func (r *TruncateRetry) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || a == nil {
 		return a, err
 	}
@@ -40,11 +40,16 @@ func (r *TruncateRetry) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	// Retry the same query on the other resolver if the first one returned a truncated response.
 	if a.Truncated {
 		logger(r.id, q, ci).WithField("resolver", r.retryResolver).Debug("truncated response, forwarding to retry-resolver")
-		a, err = r.retryResolver.Resolve(q, ci)
+		a, err = r.retryResolver.Resolve(q, ci, PanelSocksDialer)
 	}
 	return a, err
 }
 
 func (r *TruncateRetry) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *TruncateRetry) CertMonitor() error {
+	return nil
 }

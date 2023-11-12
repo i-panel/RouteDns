@@ -5,12 +5,14 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/XrayR-project/XrayR/api"
 	"github.com/XrayR-project/XrayR/api/sspanel"
+	"github.com/txthinking/socks5"
 )
 
 // HTTPLoader reads blocklist rules from a server via HTTP(S).
@@ -23,11 +25,11 @@ type PanelLoader struct {
 
 // HTTPLoaderOptions holds options for HTTP blocklist loaders.
 type PanelLoaderOptions struct {
-	CacheDir string
+	CacheDir        string
 	BlocklistFormat string
 	AllowlistFormat string
-	NodeInfo      *api.NodeInfo
-	UserList      *[]api.UserInfo
+	NodeInfo        *api.NodeInfo
+	UserList        *[]api.UserInfo
 	// DB *PanelDB
 	Type string
 
@@ -47,11 +49,11 @@ func (l *PanelLoader) Load() (rules []string, err error) {
 	return rules, nil
 }
 
-func getDB(name, Type string, loader *PanelLoader) (BlocklistDB, error) {
+func getDB(Type string, loader *PanelLoader) (BlocklistDB, error) {
 
 	var (
-		db  BlocklistDB
-		err error
+		db     BlocklistDB
+		err    error
 		Format string
 	)
 
@@ -63,13 +65,13 @@ func getDB(name, Type string, loader *PanelLoader) (BlocklistDB, error) {
 	default:
 		return nil, fmt.Errorf("unsupported format '%s'", Format)
 	}
-	loader.opt.Type =Type
-	
+	loader.opt.Type = Type
+
 	switch Format {
 	case "domainx":
-		db, err = NewDomainXDB(name, loader)
+		db, err = NewDomainXDB(Type, loader)
 	case "hostsx":
-		db, err = NewHostsXDB(name, loader)
+		db, err = NewHostsXDB(Type, loader)
 	default:
 		return nil, fmt.Errorf("unsupported format '%s'", Format)
 	}
@@ -84,40 +86,79 @@ func (l *PanelLoader) Get() (RouteDNS *PanelDB, err error) {
 	log.Trace("loading blocklist")
 
 	start := time.Now()
-	
+
 	l.API.NodeType = "Http"
 	Nodes, err := l.API.GetNodeInfo()
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 	l.opt.NodeInfo = Nodes
 
+	var client *socks5.Client
+	isdialer := false
+	if Nodes.RouteDNS.Socks5.Socks5Address != "" {
+		client, err = socks5.NewClient(
+			Nodes.RouteDNS.Socks5.Socks5Address,
+			Nodes.RouteDNS.Socks5.Username,
+			Nodes.RouteDNS.Socks5.Password,
+			0,
+			int(5*time.Second),
+		)
+		if err != nil {
+			return nil, err
+		}
+		isdialer = true
+	}
+
 	userList, err := l.API.GetUserList()
-	if err !=nil {
+	if err != nil {
 		return nil, err
 	}
 	l.opt.UserList = userList
 
-	AllowlistDB, err := getDB("name-here", "allow", l)
+	AllowlistDB, err := getDB("allow", l)
 	if err != nil {
 		return nil, err
 	}
-	BlocklistDB, err := getDB("name-here", "block", l)
+	BlocklistDB, err := getDB("block", l)
 	if err != nil {
 		return nil, err
 	}
-	IPAllowlistDB, err := NewCidrDBX("name-here", l)
+	IPAllowlistDB, err := NewCidrDBX("iplist", l)
 	if err != nil {
 		return nil, err
 	}
 
 	log.WithField("load-time", time.Since(start)).Trace("completed loading blocklist")
 
-	return &PanelDB{
+	Spoof4 := net.ParseIP(Nodes.RouteDNS.Spoof4)
+	if Nodes.RouteDNS.Spoof4 != "" && Spoof4 == nil {
+		return nil, fmt.Errorf("spoof4 format error")
+	}
+	Spoof6 := net.ParseIP(Nodes.RouteDNS.Spoof6)
+	if Nodes.RouteDNS.Spoof6 != "" && Spoof6 == nil {
+		return nil, fmt.Errorf("spoof6 format error")
+	}
+
+	
+	res := &PanelDB{
+		Spoof4:        Spoof4,
+		Spoof6:        Spoof6,
 		AllowlistDB:   AllowlistDB,
 		BlocklistDB:   BlocklistDB,
 		IpAllowlistDB: IPAllowlistDB,
-	}, nil
+	}
+	if isdialer {
+		res.Socks5Dialer = Socks5Dialer{Client: client, opt: Socks5DialerOptions{
+			Username:     Nodes.RouteDNS.Socks5.Username,
+			Password:     Nodes.RouteDNS.Socks5.Password,
+			TCPTimeout:   0,
+			UDPTimeout:   5 * time.Second,
+			ResolveLocal: Nodes.RouteDNS.Socks5.ResolveLocal,
+			LocalAddr:    net.ParseIP(Nodes.RouteDNS.Socks5.LocalAddr),
+		}}
+	}
+	return res, nil
 }
 
 // Loads a cached version of the list from disk. The filename is made by hashing the URL with SHA256

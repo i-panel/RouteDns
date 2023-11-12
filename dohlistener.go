@@ -7,11 +7,13 @@ import (
 	"expvar"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
@@ -30,6 +32,9 @@ type DoHListener struct {
 	addr string
 	r    Resolver
 	opt  DoHListenerOptions
+	Lego *mylego.CertConfig
+	MutualTLS bool
+	
 
 	handler http.Handler
 
@@ -73,6 +78,40 @@ func NewDoHListenerMetrics(id string) *DoHListenerMetrics {
 		get:  getVarInt("listener", id, "get"),
 		post: getVarInt("listener", id, "post"),
 	}
+}
+
+func (s *DoHListener) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		_, _, _, _, err = lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		cert, key, ca, err := GetCertFile(s.Lego)
+		if err != nil {
+			fmt.Print(err)
+		}
+	
+		tlsConfig, err := TLSServerConfig(ca, cert, key, s.MutualTLS)
+		if err != nil {
+			return err
+		}		
+		s.opt.TLSConfig = tlsConfig
+		err = s.Stop()
+		if err != nil {
+			fmt.Printf("failed to stop DTLS listener %s, err: %s", s.id,err)
+		}
+		err = s.Start()
+		if err != nil {
+			fmt.Printf("failed to start DTLS listener %s, err: %s", s.id,err)
+		}
+	}
+	return nil
 }
 
 // NewDoHListener returns an instance of a DNS-over-HTTPS listener.
@@ -269,7 +308,7 @@ func (s *DoHListener) parseAndRespond(b []byte, w http.ResponseWriter, r *http.R
 	a := new(dns.Msg)
 	if isAllowed(s.opt.AllowedNet, ci.SourceIP) {
 		log.WithField("resolver", s.r.String()).Debug("forwarding query to resolver")
-		a, err = s.r.Resolve(q, ci)
+		a, err = s.r.Resolve(q, ci, nil)
 		if err != nil {
 			log.WithError(err).Error("failed to resolve")
 			a = new(dns.Msg)

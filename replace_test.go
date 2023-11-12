@@ -41,7 +41,7 @@ func TestReplace(t *testing.T) {
 	// First query without any expected modifications
 	q := new(dns.Msg)
 	q.SetQuestion("test.com.", dns.TypeA)
-	a, err := b.Resolve(q, ci)
+	a, err := b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, "test.com.", a.Answer[0].Header().Name)
 	require.Equal(t, "test.com.", actualQueryName)
@@ -49,7 +49,7 @@ func TestReplace(t *testing.T) {
 	// Now with modifications. The resolved name should be replaced
 	// while in the reponse we should see the original name again.
 	q.SetQuestion("my.test.com.", dns.TypeA)
-	a, err = b.Resolve(q, ci)
+	a, err = b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, "my.test.com.", a.Answer[0].Header().Name)
 	require.Equal(t, "my.test.com.", a.Question[0].Name)

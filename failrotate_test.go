@@ -18,9 +18,9 @@ func TestFailRotate(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Send the first couple of queries. The first resolver should be active and be used for both
-	_, err := g.Resolve(q, ci)
+	_, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, r1.HitCount())
 	require.Equal(t, 0, r2.HitCount())
@@ -29,7 +29,7 @@ func TestFailRotate(t *testing.T) {
 	r1.SetFail(true)
 
 	// The next one should hit both stores (1st will fail, 2nd succeed)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 3, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -38,9 +38,9 @@ func TestFailRotate(t *testing.T) {
 	r1.SetFail(false)
 
 	// Any further requests should only go to the 2nd
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 3, r1.HitCount())
 	require.Equal(t, 3, r2.HitCount())
@@ -49,14 +49,14 @@ func TestFailRotate(t *testing.T) {
 	r2.SetFail(true)
 
 	// This request should go to the 2nd and then be retried on the first
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 4, r1.HitCount())
 	require.Equal(t, 4, r2.HitCount())
 
 	// Break both, requests should all fail now after trying both
 	r1.SetFail(true)
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.Error(t, err)
 	require.Equal(t, 5, r1.HitCount())
 	require.Equal(t, 5, r2.HitCount())
@@ -77,7 +77,7 @@ func TestFailRotateSERVFAIL(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Send the first query, the first resolver will return SERVFAIL and the request will go to the 2nd
-	_, err = g.Resolve(q, ci)
+	_, err = g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r2.HitCount())
 }
@@ -92,7 +92,7 @@ func TestFailRotateDrop(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// The query should be dropped, so no failover
-	_, err := g.Resolve(q, ci)
+	_, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r2.HitCount())
 }
@@ -110,7 +110,7 @@ func TestFailRotateSERVFAILAll(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("test.com.", dns.TypeA)
 
-	a, err := g.Resolve(q, ci)
+	a, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, dns.RcodeServerFailure, a.Rcode)
 }

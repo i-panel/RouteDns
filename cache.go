@@ -130,7 +130,7 @@ func NewCache(id string, resolver Resolver, opt CacheOptions) *Cache {
 
 // Resolve a DNS query by first checking an internal cache for existing
 // results
-func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if len(q.Question) < 1 {
 		return nil, errors.New("no question in query")
 	}
@@ -138,7 +138,7 @@ func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	// it's not actually supported by servers. If we do get one of those,
 	// just pass it through and bypass caching.
 	if len(q.Question) > 1 {
-		return r.resolver.Resolve(q, ci)
+		return r.resolver.Resolve(q, ci, PanelSocksDialer)
 	}
 
 	log := logger(r.id, q, ci)
@@ -166,7 +166,7 @@ func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 					log.Debug("prefetching record")
 
 					// Send the same query upstream
-					prefetchA, err := r.resolver.Resolve(prefetchQ, ci)
+					prefetchA, err := r.resolver.Resolve(prefetchQ, ci, PanelSocksDialer)
 					if err != nil || prefetchA == nil {
 						return
 					}
@@ -196,7 +196,7 @@ func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	log.WithField("resolver", r.resolver.String()).Debug("cache-miss, forwarding")
 
 	// Get a response from upstream
-	a, err := r.resolver.Resolve(q.Copy(), ci)
+	a, err := r.resolver.Resolve(q.Copy(), ci, PanelSocksDialer)
 	if err != nil || a == nil {
 		return nil, err
 	}
@@ -214,6 +214,11 @@ func (r *Cache) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Cache) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Cache) CertMonitor() error {
+	return nil
 }
 
 // Returns an answer from the cache with it's TTL updated or false in case of a cache-miss.

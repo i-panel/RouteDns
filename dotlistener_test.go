@@ -36,7 +36,7 @@ func TestDoTListenerSimple(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = c.Resolve(q, ClientInfo{})
+	_, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query
@@ -71,7 +71,7 @@ func TestDoTListenerMutual(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = c.Resolve(q, ClientInfo{})
+	_, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query
@@ -107,7 +107,7 @@ func TestDoTListenerPadding(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("google.com.", dns.TypeA)
 	q.SetEdns0(4096, false)
-	a, err := c.Resolve(q, ClientInfo{})
+	a, err := c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	edns0 := a.IsEdns0()
 	require.NotNil(t, edns0, "expected EDNS0 option in response")
@@ -122,7 +122,7 @@ func TestDoTListenerPadding(t *testing.T) {
 	// Send a query without the EDNS0 option. The response should not have an EDNS0 record.
 	q = new(dns.Msg)
 	q.SetQuestion("google.com.", dns.TypeA)
-	a, err = c.Resolve(q, ClientInfo{})
+	a, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	edns0 = a.IsEdns0()
 	require.Nil(t, edns0, "unexpected EDNS0 option in response")

@@ -58,9 +58,9 @@ func NewFastestTCP(id string, resolver Resolver, opt FastestTCPOptions) *Fastest
 
 // Resolve a DNS query and order the response based on which IP was able to establish
 // a TCP connection the fastest.
-func (r *FastestTCP) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *FastestTCP) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
-	a, err := r.resolver.Resolve(q, ci)
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil {
 		return a, err
 	}
@@ -124,6 +124,11 @@ func (r *FastestTCP) setTTL(rrs ...dns.RR) {
 
 func (r *FastestTCP) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *FastestTCP) CertMonitor() error {
+	return nil
 }
 
 // Probes all IPs and returns only the RR with the fastest responding IP.

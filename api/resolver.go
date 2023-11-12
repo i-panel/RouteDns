@@ -25,6 +25,7 @@ func instantiateResolver(id string, r resolver, resolvers map[string]rdns.Resolv
 			LocalAddr:     net.ParseIP(r.LocalAddr),
 			TLSConfig:     tlsConfig,
 			QueryTimeout:  time.Duration(r.QueryTimeout) * time.Second,
+			Lego:          &r.Lego,
 		}
 		resolvers[id], err = rdns.NewDoQClient(id, r.Address, opt)
 		if err != nil {
@@ -43,6 +44,7 @@ func instantiateResolver(id string, r resolver, resolvers map[string]rdns.Resolv
 			TLSConfig:     tlsConfig,
 			QueryTimeout:  time.Duration(r.QueryTimeout) * time.Second,
 			Dialer:        socks5DialerFromConfig(r),
+			Lego:          &r.Lego,
 		}
 		resolvers[id], err = rdns.NewDoTClient(id, r.Address, opt)
 		if err != nil {
@@ -61,6 +63,7 @@ func instantiateResolver(id string, r resolver, resolvers map[string]rdns.Resolv
 			DTLSConfig:    dtlsConfig,
 			UDPSize:       r.EDNS0UDPSize,
 			QueryTimeout:  time.Duration(r.QueryTimeout) * time.Second,
+			Lego:          &r.Lego,
 		}
 		resolvers[id], err = rdns.NewDTLSClient(id, r.Address, opt)
 		if err != nil {
@@ -81,6 +84,7 @@ func instantiateResolver(id string, r resolver, resolvers map[string]rdns.Resolv
 			LocalAddr:     net.ParseIP(r.LocalAddr),
 			QueryTimeout:  time.Duration(r.QueryTimeout) * time.Second,
 			Dialer:        socks5DialerFromConfig(r),
+			Lego:          &r.Lego,
 		}
 		resolvers[id], err = rdns.NewDoHClient(id, r.Address, opt)
 		if err != nil {

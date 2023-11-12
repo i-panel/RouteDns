@@ -3,10 +3,14 @@ package rdns
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
+	M "github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	"github.com/pion/dtls/v2"
 	"github.com/sirupsen/logrus"
@@ -16,6 +20,7 @@ import (
 type DTLSListener struct {
 	*dns.Server
 	id string
+	Lego     *M.CertConfig
 
 	opt DTLSListenerOptions
 }
@@ -25,8 +30,44 @@ var _ Listener = &DTLSListener{}
 // DoTListenerOptions contains options used by the DNS-over-DTLS server.
 type DTLSListenerOptions struct {
 	ListenOptions
-
+	MutualTLS bool
 	DTLSConfig *dtls.Config
+}
+
+
+// Check Cert
+func (s *DTLSListener) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		_, _, _, _, err = lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		cert, key, ca, err := GetCertFile(s.Lego)
+		if err != nil {
+			fmt.Print(err)
+		}
+	
+		dtlsConfig, err := DTLSServerConfig(ca, cert, key, s.opt.MutualTLS)
+		if err != nil {
+			return err
+		}		
+		s.opt.DTLSConfig = dtlsConfig
+		err = s.Stop()
+		if err != nil {
+			fmt.Printf("failed to stop DTLS listener %s, err: %s", s.id,err)
+		}
+		err = s.Start()
+		if err != nil {
+			fmt.Printf("failed to start DTLS listener %s, err: %s", s.id,err)
+		}
+	}
+	return nil
 }
 
 // NewDTLSListener returns an instance of a DNS-over-DTLS listener.
@@ -111,3 +152,4 @@ func (c *dtlsConn) Read(b []byte) (int, error) {
 	n, _ = c.buf.Read(b)
 	return n, err
 }
+

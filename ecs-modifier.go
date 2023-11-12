@@ -27,7 +27,7 @@ func NewECSModifier(id string, resolver Resolver, f ECSModifierFunc) (*ECSModifi
 }
 
 // Resolve modifies the OPT EDNS0 record and passes it to the next resolver.
-func (r *ECSModifier) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ECSModifier) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if len(q.Question) < 1 {
 		return nil, errors.New("no question in query")
 	}
@@ -38,11 +38,16 @@ func (r *ECSModifier) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	}
 
 	// Pass it on upstream
-	return r.resolver.Resolve(q, ci)
+	return r.resolver.Resolve(q, ci, PanelSocksDialer)
 }
 
 func (r *ECSModifier) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ECSModifier) CertMonitor() error {
+	return nil
 }
 
 func ECSModifierDelete(id string, q *dns.Msg, ci ClientInfo) {

@@ -44,16 +44,21 @@ func NewResponseBlocklistName(id string, resolver Resolver, opt ResponseBlocklis
 
 // Resolve a DNS query by first querying the upstream resolver, then checking any responses with
 // strings against a blocklist. Responds with NXDOMAIN if the response matches the filter.
-func (r *ResponseBlocklistName) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	answer, err := r.resolver.Resolve(q, ci)
+func (r *ResponseBlocklistName) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	answer, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || answer == nil {
 		return answer, err
 	}
-	return r.blockIfMatch(q, answer, ci)
+	return r.blockIfMatch(q, answer, ci, PanelSocksDialer)
 }
 
 func (r *ResponseBlocklistName) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ResponseBlocklistName) CertMonitor() error {
+	return nil
 }
 
 func (r *ResponseBlocklistName) refreshLoopBlocklist(refresh time.Duration) {
@@ -72,7 +77,7 @@ func (r *ResponseBlocklistName) refreshLoopBlocklist(refresh time.Duration) {
 	}
 }
 
-func (r *ResponseBlocklistName) blockIfMatch(query, answer *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ResponseBlocklistName) blockIfMatch(query, answer *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	for _, records := range [][]dns.RR{answer.Answer, answer.Ns, answer.Extra} {
 		for _, rr := range records {
 			var name string
@@ -94,7 +99,7 @@ func (r *ResponseBlocklistName) blockIfMatch(query, answer *dns.Msg, ci ClientIn
 				log := logger(r.id, query, ci).WithField("rule", rule.GetRule())
 				if r.BlocklistResolver != nil {
 					log.WithField("resolver", r.BlocklistResolver).Debug("blocklist match, forwarding to blocklist-resolver")
-					return r.BlocklistResolver.Resolve(query, ci)
+					return r.BlocklistResolver.Resolve(query, ci, PanelSocksDialer)
 				}
 				log.Debug("blocking response")
 				return nxdomain(query), nil

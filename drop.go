@@ -18,11 +18,16 @@ func NewDropResolver(id string) *DropResolver {
 }
 
 // Resolve a DNS query by returning nil to signal to the listener to drop this request.
-func (r *DropResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *DropResolver) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	logger(r.id, q, ci).Debug("dropping query")
 	return nil, nil
 }
 
 func (r *DropResolver) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *DropResolver) CertMonitor() error {
+	return nil
 }

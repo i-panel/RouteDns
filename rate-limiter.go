@@ -65,7 +65,7 @@ func NewRateLimiter(id string, resolver Resolver, opt RateLimiterOptions) *RateL
 }
 
 // Resolve a DNS query while limiting the query rate per time period.
-func (r *RateLimiter) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *RateLimiter) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
 	r.metrics.query.Add(1)
 
@@ -108,16 +108,21 @@ func (r *RateLimiter) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 		r.metrics.exceed.Add(1)
 		if r.LimitResolver != nil {
 			log.WithField("resolver", r.LimitResolver).Debug("rate-limit exceeded, forwarding to limit-resolver")
-			return r.LimitResolver.Resolve(q, ci)
+			return r.LimitResolver.Resolve(q, ci, PanelSocksDialer)
 		}
 		r.metrics.drop.Add(1)
 		log.Debug("rate-limit reached, dropping")
 		return nil, nil
 	}
 	log.WithField("resolver", r.resolver).Debug("forwarding query to resolver")
-	return r.resolver.Resolve(q, ci)
+	return r.resolver.Resolve(q, ci, PanelSocksDialer)
 }
 
 func (r *RateLimiter) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *RateLimiter) CertMonitor() error {
+	return nil
 }

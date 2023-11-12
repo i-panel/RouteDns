@@ -27,13 +27,13 @@ func TestBlocklistRegexp(t *testing.T) {
 
 	// First query a domain not blocked. Should be passed through to the resolver
 	q.SetQuestion("test.com.", dns.TypeA)
-	_, err = b.Resolve(q, ci)
+	_, err = b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 
 	// One domain from the blocklist should come back with NXDOMAIN
 	q.SetQuestion("x.evil.test.", dns.TypeA)
-	a, err := b.Resolve(q, ci)
+	a, err := b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 	require.Equal(t, dns.RcodeNameError, a.Rcode)
@@ -65,20 +65,20 @@ func TestBlocklistAllow(t *testing.T) {
 
 	// First query a domain not blocked. Should be passed through to the resolver
 	q.SetQuestion("test.com.", dns.TypeA)
-	_, err = b.Resolve(q, ci)
+	_, err = b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 
 	// One domain from the blocklist should come back with NXDOMAIN
 	q.SetQuestion("x.evil.test.", dns.TypeA)
-	a, err := b.Resolve(q, ci)
+	a, err := b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 	require.Equal(t, dns.RcodeNameError, a.Rcode)
 
 	// One domain blocklist that also matches the allowlist should go through
 	q.SetQuestion("good.evil.test.", dns.TypeA)
-	_, err = b.Resolve(q, ci)
+	_, err = b.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, r.HitCount())
 }

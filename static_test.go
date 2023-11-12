@@ -26,7 +26,7 @@ func TestStaticResolver(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("test.com.", dns.TypeA)
 
-	a, err := r.Resolve(q, ClientInfo{})
+	a, err := r.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	require.Equal(t, len(opt.Answer), len(a.Answer))
 	require.Equal(t, len(opt.NS), len(a.Ns))

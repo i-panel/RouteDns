@@ -25,8 +25,8 @@ func NewResponseCollapse(id string, resolver Resolver, opt ResponseCollapseOptio
 
 // Resolve a DNS query, then collapse the response to remove anything from the
 // answer that wasn't asked for.
-func (r *ResponseCollapse) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	answer, err := r.resolver.Resolve(q, ci)
+func (r *ResponseCollapse) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	answer, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || answer == nil || answer.Rcode != dns.RcodeSuccess {
 		return answer, err
 	}
@@ -55,4 +55,9 @@ func (r *ResponseCollapse) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) 
 
 func (r *ResponseCollapse) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ResponseCollapse) CertMonitor() error {
+	return nil
 }

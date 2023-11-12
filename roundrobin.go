@@ -28,14 +28,14 @@ func NewRoundRobin(id string, resolvers ...Resolver) *RoundRobin {
 }
 
 // Resolve a DNS query using a round-robin resolver group.
-func (r *RoundRobin) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *RoundRobin) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	r.mu.Lock()
 	resolver := r.resolvers[r.current]
 	r.current = (r.current + 1) % len(r.resolvers)
 	r.mu.Unlock()
 	logger(r.id, q, ci).WithField("resolver", resolver).Debug("forwarding query to resolver")
 	r.metrics.route.Add(resolver.String(), 1)
-	msg, err := resolver.Resolve(q, ci)
+	msg, err := resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil {
 		r.metrics.failure.Add(resolver.String(), 1)
 	}
@@ -44,4 +44,9 @@ func (r *RoundRobin) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *RoundRobin) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *RoundRobin) CertMonitor() error {
+	return nil
 }

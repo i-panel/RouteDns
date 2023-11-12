@@ -42,7 +42,7 @@ func NewFailRotate(id string, opt FailRotateOptions, resolvers ...Resolver) *Fai
 
 // Resolve a DNS query using a failover resolver group that switches to the next
 // resolver on error.
-func (r *FailRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *FailRotate) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
 	var (
 		err error
@@ -52,7 +52,7 @@ func (r *FailRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 		resolver, active := r.current()
 		log.WithField("resolver", resolver.String()).Trace("forwarding query to resolver")
 		r.metrics.route.Add(resolver.String(), 1)
-		a, err = resolver.Resolve(q, ci)
+		a, err = resolver.Resolve(q, ci, PanelSocksDialer)
 		if err == nil && r.isSuccessResponse(a) { // Return immediately if successful
 			return a, err
 		}
@@ -66,6 +66,11 @@ func (r *FailRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *FailRotate) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *FailRotate) CertMonitor() error {
+	return nil
 }
 
 // Thread-safe method to return the currently active resolver.

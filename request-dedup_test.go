@@ -28,7 +28,7 @@ func TestRequestDedup(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := g.Resolve(q, ci)
+			_, err := g.Resolve(q, ci, nil)
 			require.NoError(t, err)
 		}()
 	}

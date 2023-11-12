@@ -49,24 +49,29 @@ func NewClientAllowlist(id string, resolver Resolver, opt ClientAllowlistOptions
 // Resolve a DNS query after checking the client's IP against a allowlist. Responds with
 // REFUSED if the client IP is on the allowlist, or sends the query to an alternative
 // resolver if one is configured.
-func (r *ClientAllowlist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ClientAllowlist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if match, ok := r.AllowlistDB.Match(ci.SourceIP); ok {
 		log := Log.WithFields(logrus.Fields{"id": r.id, "qname": qName(q), "list": match.List, "rule": match.Rule, "ip": ci.SourceIP})
 		r.metrics.blocked.Add(1)
 		if r.AllowlistResolver != nil {
 			log.WithField("resolver", r.AllowlistResolver).Debug("client not on allowlist, forwarding to allowlist-resolver")
-			return r.AllowlistResolver.Resolve(q, ci)
+			return r.AllowlistResolver.Resolve(q, ci, PanelSocksDialer)
 		}
 		log.Debug("blocking client")
 		return refused(q), nil
 	}
 
 	r.metrics.allowed.Add(1)
-	return r.resolver.Resolve(q, ci)
+	return r.resolver.Resolve(q, ci, PanelSocksDialer)
 }
 
 func (r *ClientAllowlist) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ClientAllowlist) CertMonitor() error {
+	return nil
 }
 
 func (r *ClientAllowlist) GetIPBlocklistDB() IPBlocklistDB {

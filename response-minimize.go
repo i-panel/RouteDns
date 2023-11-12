@@ -20,8 +20,8 @@ func NewResponseMinimize(id string, resolver Resolver) *ResponseMinimize {
 
 // Resolve a DNS query with the upstream resolver and strip out any extra or NS
 // records in the response.
-func (r *ResponseMinimize) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	answer, err := r.resolver.Resolve(q, ci)
+func (r *ResponseMinimize) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	answer, err := r.resolver.Resolve(q, ci,PanelSocksDialer)
 	if err != nil || answer == nil {
 		return answer, err
 	}
@@ -33,4 +33,9 @@ func (r *ResponseMinimize) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) 
 
 func (r *ResponseMinimize) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ResponseMinimize) CertMonitor() error {
+	return nil
 }

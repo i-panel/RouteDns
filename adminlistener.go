@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"expvar"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/sirupsen/logrus"
@@ -25,6 +27,8 @@ type AdminListener struct {
 	id   string
 	addr string
 	opt  AdminListenerOptions
+	Lego *mylego.CertConfig
+	MutualTLS bool
 
 	mux *http.ServeMux
 }
@@ -39,6 +43,41 @@ type AdminListenerOptions struct {
 	Transport string
 
 	TLSConfig *tls.Config
+}
+
+// Check Cert
+func (s *AdminListener) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		_, _, _, _, err = lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		cert, key, ca, err := GetCertFile(s.Lego)
+		if err != nil {
+			fmt.Print(err)
+		}
+	
+		tlsConfig, err := TLSServerConfig(ca, cert, key, s.MutualTLS)
+		if err != nil {
+			return err
+		}		
+		s.opt.TLSConfig = tlsConfig
+		err = s.Stop()
+		if err != nil {
+			fmt.Printf("failed to stop DTLS listener %s, err: %s", s.id,err)
+		}
+		err = s.Start()
+		if err != nil {
+			fmt.Printf("failed to start DTLS listener %s, err: %s", s.id,err)
+		}
+	}
+	return nil
 }
 
 // NewAdminListener returns an instance of an admin service listener.

@@ -22,14 +22,14 @@ func TestRouterType(t *testing.T) {
 
 	// Not MX record, should go to r2
 	q.SetQuestion("acme.test.", dns.TypeA)
-	_, err := router.Resolve(q, ci)
+	_, err := router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
 
 	// MX record, should go to r1
 	q.SetQuestion("acme.test.", dns.TypeMX)
-	_, err = router.Resolve(q, ci)
+	_, err = router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -49,7 +49,7 @@ func TestRouterClass(t *testing.T) {
 
 	// ClassINET question, should go to r2
 	q.SetQuestion("acme.test.", dns.TypeA)
-	_, err := router.Resolve(q, ci)
+	_, err := router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -57,7 +57,7 @@ func TestRouterClass(t *testing.T) {
 	// ClassAny should go to r1
 	q.Question = make([]dns.Question, 1)
 	q.Question[0] = dns.Question{"miek.nl.", dns.TypeMX, dns.ClassANY}
-	_, err = router.Resolve(q, ci)
+	_, err = router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -77,14 +77,14 @@ func TestRouterName(t *testing.T) {
 
 	// No match, should go to r2
 	q.SetQuestion("bla.test.", dns.TypeA)
-	_, err := router.Resolve(q, ci)
+	_, err := router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
 
 	// Match, should go to r1
 	q.SetQuestion("x.acme.test.", dns.TypeMX)
-	_, err = router.Resolve(q, ci)
+	_, err = router.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
@@ -103,13 +103,13 @@ func TestRouterSource(t *testing.T) {
 	router.Add(route1, route2)
 
 	// No match, should go to r2
-	_, err := router.Resolve(q, ClientInfo{SourceIP: net.ParseIP("192.168.1.50")})
+	_, err := router.Resolve(q, ClientInfo{SourceIP: net.ParseIP("192.168.1.50")}, nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())
 
 	// Match, should go to r1
-	_, err = router.Resolve(q, ClientInfo{SourceIP: net.ParseIP("192.168.1.100")})
+	_, err = router.Resolve(q, ClientInfo{SourceIP: net.ParseIP("192.168.1.100")}, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r1.HitCount())
 	require.Equal(t, 1, r2.HitCount())

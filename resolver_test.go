@@ -24,7 +24,7 @@ func (r *TestResolver) GetIPBlocklistDB() (IPBlocklistDB) {
 	return nil
 }
 
-func (r *TestResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *TestResolver) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	r.hitCount++
 	if r.shouldFail {
 		return nil, errors.New("failed")
@@ -37,6 +37,11 @@ func (r *TestResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *TestResolver) String() string {
 	return "TestResolver()"
+}
+
+// Check Cert
+func (s *TestResolver) CertMonitor() error {
+	return nil
 }
 
 func (r *TestResolver) HitCount() int {

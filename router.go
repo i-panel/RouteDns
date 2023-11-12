@@ -47,7 +47,7 @@ func NewRouter(id string) *Router {
 }
 
 // Resolve a request by routing it to the right resolved based on the routes setup in the router.
-func (r *Router) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Router) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if len(q.Question) < 1 {
 		return nil, errors.New("no question in query")
 	}
@@ -62,7 +62,7 @@ func (r *Router) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 			"resolver": route.resolver.String()},
 		).Debug("routing query to resolver")
 		r.metrics.route.Add(route.resolver.String(), 1)
-		a, err := route.resolver.Resolve(q, ci)
+		a, err := route.resolver.Resolve(q, ci, PanelSocksDialer)
 		if err != nil {
 			r.metrics.failure.Add(route.resolver.String(), 1)
 		}
@@ -84,4 +84,9 @@ func (r *Router) Add(routes ...*route) {
 
 func (r *Router) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Router) CertMonitor() error {
+	return nil
 }

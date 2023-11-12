@@ -5,13 +5,17 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
 	quic "github.com/quic-go/quic-go"
 	"github.com/sirupsen/logrus"
+
+	M "github.com/XrayR-project/XrayR/common/mylego"
 )
 
 const (
@@ -42,6 +46,8 @@ type DoQClientOptions struct {
 	TLSConfig *tls.Config
 
 	QueryTimeout time.Duration
+	Lego          *M.CertConfig
+
 }
 
 var _ Resolver = &DoQClient{}
@@ -100,7 +106,7 @@ func NewDoQClient(id, endpoint string, opt DoQClientOptions) (*DoQClient, error)
 }
 
 // Resolve a DNS query.
-func (d *DoQClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (d *DoQClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	logger(d.id, q, ci).WithFields(logrus.Fields{
 		"resolver": d.endpoint,
 		"protocol": "doq",
@@ -232,4 +238,26 @@ func (s *quicConnection) getStream(endpoint string, log *logrus.Entry) (quic.Str
 		}
 	}
 	return stream, err
+}
+
+// Check Cert
+func (s *DoQClient) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		CertPath, KeyPath, CaPath, _, err := lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		tlsConfig, err := TLSClientConfig(CaPath, CertPath, KeyPath, s.Lego.CertDomain)
+		if err != nil {
+			return err
+		}
+		s.TLSConfig = tlsConfig
+	}
+	return nil
 }

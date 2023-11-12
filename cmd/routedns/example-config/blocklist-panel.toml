@@ -2,7 +2,7 @@
 address = "1.1.1.1:853"
 protocol = "dot"
 
-[groups.node1]
+[groups.node]
 type                = "blocklist-panel"
 resolvers           = ["cloudflare-dot"] # Anything that passes the filter is sent on to this resolver
 allowlist-format    = "hostsx"            # "domain(x)", "hosts(x)" or "regexp", defaults to "regexp"
@@ -12,6 +12,7 @@ api = { ApiHost="http://127.0.0.1", NodeID=1, Key="SSPANEL" }
 
 [groups.cloudflare-blocklist]
 type                = "panel-rotate"
+# cert = { CertMode = "dns", CertDomain = "node1.test.com", "Refresh" = 600, CertFile="/etc/XrayR/cert/node1.test.com.cert", KeyFile="/etc/XrayR/cert/node1.test.com.key", Provider="alidns", Email="test@me.com", DNSEnv={ ALICLOUD_ACCESS_KEY="aaa", ALICLOUD_SECRET_KEY="bbb"}, RejectUnknownSni=false}
 resolvers           = ["cloudflare-dot"] # Anything that passes the filter is sent on to this resolver
 
 # [groups.smartdns-nonallowed]

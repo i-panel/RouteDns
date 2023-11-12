@@ -39,7 +39,7 @@ func TestCache(t *testing.T) {
 
 	// First query should be a cache-miss and be passed on to the upstream resolver
 	q.SetQuestion("example.com.", dns.TypeA)
-	a, err := c.Resolve(q, ci)
+	a, err := c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 	require.Equal(t, uint32(3600), a.Answer[0].Header().Ttl)
@@ -47,7 +47,7 @@ func TestCache(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// Second one should come from the cache and should have a lower TTL
-	a, err = c.Resolve(q, ci)
+	a, err = c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 	require.True(t, a.Answer[0].Header().Ttl < answerTTL)
@@ -55,7 +55,7 @@ func TestCache(t *testing.T) {
 	// Different question should go through to upstream again, low TTL
 	answerTTL = 1
 	q.SetQuestion("example2.com.", dns.TypeA)
-	a, err = c.Resolve(q, ci)
+	a, err = c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, r.HitCount())
 	require.Equal(t, answerTTL, a.Answer[0].Header().Ttl)
@@ -64,7 +64,7 @@ func TestCache(t *testing.T) {
 
 	// TTL should have expired now, so this should be a cache-miss and be sent upstream
 	q.SetQuestion("example2.com.", dns.TypeA)
-	_, err = c.Resolve(q, ci)
+	_, err = c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 3, r.HitCount())
 }
@@ -89,12 +89,12 @@ func TestCacheNXDOMAIN(t *testing.T) {
 	// First query should be a cache-miss and be passed on to the upstream resolver
 	// Since it's an NXDOMAIN it should end up in the cache as well, with default TTL
 	q.SetQuestion("example.com.", dns.TypeA)
-	_, err := c.Resolve(q, ci)
+	_, err := c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 
 	// Second one should be returned from the cache
-	_, err = c.Resolve(q, ci)
+	_, err = c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 }
@@ -119,14 +119,14 @@ func TestCacheHardenBelowNXDOMAIN(t *testing.T) {
 
 	// Cache an NXDOMAIN for the parent domain
 	q.SetQuestion("example.com.", dns.TypeA)
-	_, err := c.Resolve(q, ci)
+	_, err := c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 
 	// A sub-domain query should also return NXDOMAIN based on the cached
 	// record for the parent if HardenBelowNXDOMAIN is enabled.
 	q.SetQuestion("not.exist.example.com.", dns.TypeA)
-	a, err := c.Resolve(q, ci)
+	a, err := c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
 	require.Equal(t, dns.RcodeNameError, a.Rcode)
@@ -205,10 +205,10 @@ func TestCacheNoTruncated(t *testing.T) {
 
 	// Both queries should hit the upstream resolver
 	q.SetQuestion("example.com.", dns.TypeA)
-	_, err := c.Resolve(q, ci)
+	_, err := c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, r.HitCount())
-	_, err = c.Resolve(q, ci)
+	_, err = c.Resolve(q, ci, nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, r.HitCount())
 }

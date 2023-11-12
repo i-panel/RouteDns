@@ -24,7 +24,7 @@ func NewFastest(id string, resolvers ...Resolver) *Fastest {
 
 // Resolve a DNS query by sending it to all resolvers and returning the fastest
 // non-error response
-func (r *Fastest) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Fastest) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
 
 	type response struct {
@@ -39,7 +39,7 @@ func (r *Fastest) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	for _, resolver := range r.resolvers {
 		resolver := resolver
 		go func() {
-			a, err := resolver.Resolve(q, ci)
+			a, err := resolver.Resolve(q, ci, PanelSocksDialer)
 			responseCh <- response{resolver, a, err}
 		}()
 	}
@@ -65,4 +65,9 @@ func (r *Fastest) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Fastest) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Fastest) CertMonitor() error {
+	return nil
 }

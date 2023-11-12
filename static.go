@@ -60,7 +60,7 @@ func NewStaticResolver(id string, opt StaticResolverOptions) (*StaticResolver, e
 }
 
 // Resolve a DNS query by returning a fixed response.
-func (r *StaticResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *StaticResolver) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	answer := new(dns.Msg)
 	answer.SetReply(q)
 
@@ -83,4 +83,9 @@ func (r *StaticResolver) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *StaticResolver) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *StaticResolver) CertMonitor() error {
+	return nil
 }

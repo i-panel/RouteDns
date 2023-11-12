@@ -15,7 +15,7 @@ func TestDoTClientSimple(t *testing.T) {
 	d, _ := NewDoTClient("test-dot", "dns.google:853", DoTClientOptions{})
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	r, err := d.Resolve(q, ClientInfo{})
+	r, err := d.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, r.Answer)
 }
@@ -40,13 +40,13 @@ func TestDoTClientCA(t *testing.T) {
 	d, _ := NewDoTClient("test-dot", "1.1.1.1:853", DoTClientOptions{TLSConfig: tlsConfig})
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	r, err := d.Resolve(q, ClientInfo{})
+	r, err := d.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, r.Answer)
 
 	// DoT client with invalid CA
 	d, _ = NewDoTClient("test-dot", "dns.google:853", DoTClientOptions{TLSConfig: tlsConfig})
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = d.Resolve(q, ClientInfo{})
+	_, err = d.Resolve(q, ClientInfo{}, nil)
 	require.Error(t, err)
 }

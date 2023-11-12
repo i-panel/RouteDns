@@ -39,7 +39,7 @@ func TestFastest(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Send the first query, it should go to both and the fast response (with A record) should come back.
-	a, err := g.Resolve(q, ci)
+	a, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 
 	time.Sleep(time.Millisecond) // Wait to make sure both resolvers are actually hit before checking the hit-count
@@ -85,7 +85,7 @@ func TestFastestFail(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// We have a fast failing, and a slow succeeding one. Expect success
-	a, err := g.Resolve(q, ci)
+	a, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, r2.HitCount())
@@ -117,7 +117,7 @@ func TestFastestFailAll(t *testing.T) {
 	q.SetQuestion("test.com.", dns.TypeA)
 
 	// Expect the response to be from the slow SERVFAIL
-	a, err := g.Resolve(q, ci)
+	a, err := g.Resolve(q, ci, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, r1.HitCount())

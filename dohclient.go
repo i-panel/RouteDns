@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 
@@ -44,6 +46,7 @@ type DoHClientOptions struct {
 
 	// Optional dialer, e.g. proxy
 	Dialer Dialer
+	Lego   *mylego.CertConfig
 }
 
 // DoHClient is a DNS-over-HTTP resolver with support fot HTTP/2.
@@ -57,6 +60,33 @@ type DoHClient struct {
 }
 
 var _ Resolver = &DoHClient{}
+
+// Check Cert
+func (s *DoHClient) CertMonitor() error {
+	switch s.opt.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.opt.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		CertPath, KeyPath, CaPath, _, err := lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		tlsConfig, err := TLSClientConfig(CaPath, CertPath, KeyPath, s.opt.Lego.CertDomain)
+		if err != nil {
+			log.Print(err)
+		}
+		s.opt.TLSConfig = tlsConfig
+		nResolver, err := NewDoHClient(s.id, s.endpoint, s.opt)
+		if err != nil {
+			log.Print(err)
+		}
+		s = nResolver
+	}
+	return nil
+}
 
 func NewDoHClient(id, endpoint string, opt DoHClientOptions) (*DoHClient, error) {
 	// Parse the URL template
@@ -103,7 +133,7 @@ func NewDoHClient(id, endpoint string, opt DoHClientOptions) (*DoHClient, error)
 }
 
 // Resolve a DNS query.
-func (d *DoHClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (d *DoHClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	// Packing a message is not always a read-only operation, make a copy
 	q = q.Copy()
 
@@ -119,11 +149,55 @@ func (d *DoHClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	d.metrics.query.Add(1)
 	switch d.opt.Method {
 	case "POST":
+		if PanelSocksDialer != nil {
+			tr, err := dohTcpPanelTransport(d.opt, PanelSocksDialer)
+			if err == nil {
+				d.client.Transport = tr
+			}
+		}
 		return d.ResolvePOST(q)
 	case "GET":
 		return d.ResolveGET(q)
 	}
 	return nil, errors.New("unsupported method")
+}
+
+func dohTcpPanelTransport(opt DoHClientOptions, PanelSocksDialer *Socks5Dialer) (http.RoundTripper, error) {
+	tr := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		TLSClientConfig:       opt.TLSConfig,
+		DisableCompression:    true,
+		ResponseHeaderTimeout: 10 * time.Second,
+		IdleConnTimeout:       30 * time.Second,
+	}
+	// If we're using a custom tls.Config, HTTP2 isn't enabled by default in
+	// the HTTP library. Turn it on for this transport.
+	if tr.TLSClientConfig != nil {
+		if err := http2.ConfigureTransport(tr); err != nil {
+			return nil, err
+		}
+	}
+
+	// Use a custom dialer if a bootstrap address or local address was provided
+	if opt.BootstrapAddr != "" || opt.LocalAddr != nil || opt.Dialer != nil {
+		d := net.Dialer{LocalAddr: &net.TCPAddr{IP: opt.LocalAddr}}
+		tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if opt.BootstrapAddr != "" {
+				_, port, err := net.SplitHostPort(addr)
+				if err != nil {
+					return nil, err
+				}
+				addr = net.JoinHostPort(opt.BootstrapAddr, port)
+			}
+
+			if PanelSocksDialer != nil {
+				return PanelSocksDialer.Dial(network, addr)
+			}
+
+			return d.DialContext(ctx, network, addr)
+		}
+	}
+	return tr, nil
 }
 
 // ResolvePOST resolves a DNS query via DNS-over-HTTP using the POST method.
@@ -200,7 +274,6 @@ func (d *DoHClient) String() string {
 	return d.id
 }
 
-
 // Check the HTTP response status code and parse out the response DNS message.
 func (d *DoHClient) responseFromHTTP(resp *http.Response) (*dns.Msg, error) {
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -249,6 +322,7 @@ func dohTcpTransport(opt DoHClientOptions) (http.RoundTripper, error) {
 				}
 				addr = net.JoinHostPort(opt.BootstrapAddr, port)
 			}
+
 			if opt.Dialer != nil {
 				return opt.Dialer.Dial(network, addr)
 			}

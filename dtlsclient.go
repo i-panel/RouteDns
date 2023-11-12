@@ -2,10 +2,12 @@ package rdns
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"time"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	"github.com/pion/dtls/v2"
 	"github.com/sirupsen/logrus"
@@ -35,9 +37,37 @@ type DTLSClientOptions struct {
 	DTLSConfig *dtls.Config
 
 	QueryTimeout time.Duration
+	Lego *mylego.CertConfig
 }
 
 var _ Resolver = &DTLSClient{}
+
+// Check Cert
+func (s *DTLSClient) CertMonitor() error {
+	switch s.opt.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.opt.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		CertPath, KeyPath, CaPath, _, err := lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		dtlsConfig, err := DTLSClientConfig(CaPath, CertPath, KeyPath)
+		if err != nil {
+			log.Print(err)
+		}
+		s.opt.DTLSConfig = dtlsConfig
+		nResolver, err := NewDTLSClient(s.id,s.endpoint, s.opt)
+		if err != nil {
+			log.Print(err)
+		}
+		s = nResolver
+	}
+	return nil
+}
 
 // NewDTLSClient instantiates a new DNS-over-TLS resolver.
 func NewDTLSClient(id, endpoint string, opt DTLSClientOptions) (*DTLSClient, error) {
@@ -92,7 +122,7 @@ func NewDTLSClient(id, endpoint string, opt DTLSClientOptions) (*DTLSClient, err
 }
 
 // Resolve a DNS query.
-func (d *DTLSClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (d *DTLSClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	// Packing a message is not always a read-only operation, make a copy
 	q = q.Copy()
 

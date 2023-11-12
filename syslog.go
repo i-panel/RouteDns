@@ -56,7 +56,7 @@ func NewSyslog(id string, resolver Resolver, opt SyslogOptions) *Syslog {
 }
 
 // Resolve passes a DNS query through unmodified. Query details are sent via syslog.
-func (r *Syslog) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Syslog) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	var msg string
 	if r.opt.LogRequest {
 		msg = fmt.Sprintf("id=%s qid=%d type=query client=%s qtype=%s qname=%s", r.id, q.Id, ci.SourceIP.String(), qType(q), qName(q))
@@ -65,7 +65,7 @@ func (r *Syslog) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 		}
 	}
 
-	a, err := r.resolver.Resolve(q, ci)
+	a, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err == nil && a != nil && r.opt.LogResponse {
 		if a.Rcode == dns.RcodeSuccess {
 			var answerRRs = a.Answer
@@ -106,4 +106,9 @@ func (r *Syslog) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Syslog) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Syslog) CertMonitor() error {
+	return nil
 }

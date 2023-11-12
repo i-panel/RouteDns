@@ -18,7 +18,7 @@ func TestRoundRobin(t *testing.T) {
 
 	// Send 10 queries
 	for i := 0; i < 10; i++ {
-		_, err := g.Resolve(q, ClientInfo{})
+		_, err := g.Resolve(q, ClientInfo{}, nil)
 		require.NoError(t, err)
 	}
 

@@ -50,24 +50,29 @@ func NewClientBlocklist(id string, resolver Resolver, opt ClientBlocklistOptions
 // Resolve a DNS query after checking the client's IP against a blocklist. Responds with
 // REFUSED if the client IP is on the blocklist, or sends the query to an alternative
 // resolver if one is configured.
-func (r *ClientBlocklist) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ClientBlocklist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	if match, ok := r.BlocklistDB.Match(ci.SourceIP); ok {
 		log := Log.WithFields(logrus.Fields{"id": r.id, "qname": qName(q), "list": match.List, "rule": match.Rule, "ip": ci.SourceIP})
 		r.metrics.blocked.Add(1)
 		if r.BlocklistResolver != nil {
 			log.WithField("resolver", r.BlocklistResolver).Debug("client on blocklist, forwarding to blocklist-resolver")
-			return r.BlocklistResolver.Resolve(q, ci)
+			return r.BlocklistResolver.Resolve(q, ci, PanelSocksDialer)
 		}
 		log.Debug("blocking client")
 		return refused(q), nil
 	}
 
 	r.metrics.allowed.Add(1)
-	return r.resolver.Resolve(q, ci)
+	return r.resolver.Resolve(q, ci, PanelSocksDialer)
 }
 
 func (r *ClientBlocklist) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ClientBlocklist) CertMonitor() error {
+	return nil
 }
 
 func (r *ClientBlocklist) GetIPBlocklistDB() IPBlocklistDB {

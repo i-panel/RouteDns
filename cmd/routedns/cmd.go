@@ -83,6 +83,11 @@ func start(opt options, args []string) error {
 		return err
 	}
 
+	for i := range manager.Tasks {
+		rdns.Log.Info("Start %s periodic task", manager.Tasks[i].Tag)
+		go manager.Tasks[i].Start()
+	}
+
 	// Start the listeners
 	for _, l := range manager.Listeners {
 		go func(l rdns.Listener) {

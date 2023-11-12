@@ -2,8 +2,11 @@ package rdns
 
 import (
 	"crypto/tls"
+	"fmt"
+	"log"
 	"net"
 
+	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
@@ -12,6 +15,8 @@ import (
 type DNSListener struct {
 	*dns.Server
 	id string
+	Lego *mylego.CertConfig
+	MutualTLS bool
 }
 
 var _ Listener = &DNSListener{}
@@ -19,6 +24,40 @@ var _ Listener = &DNSListener{}
 type ListenOptions struct {
 	// Network allowed to query this listener.
 	AllowedNet []*net.IPNet
+}
+
+func (s *DNSListener) CertMonitor() error {
+	switch s.Lego.CertMode {
+	case "dns", "http", "tls":
+		lego, err := mylego.New(s.Lego)
+		if err != nil {
+			log.Print(err)
+		}
+		// Xray-core supports the OcspStapling certification hot renew
+		_, _, _, _, err = lego.RenewCert()
+		if err != nil {
+			log.Print(err)
+		}
+		cert, key, ca, err := GetCertFile(s.Lego)
+		if err != nil {
+			fmt.Print(err)
+		}
+	
+		tlsConfig, err := TLSServerConfig(ca, cert, key, s.MutualTLS)
+		if err != nil {
+			return err
+		}		
+		s.TLSConfig = tlsConfig
+		err = s.Stop()
+		if err != nil {
+			fmt.Printf("failed to stop DTLS listener %s, err: %s", s.id,err)
+		}
+		err = s.Start()
+		if err != nil {
+			fmt.Printf("failed to start DTLS listener %s, err: %s", s.id,err)
+		}
+	}
+	return nil
 }
 
 // NewDNSListener returns an instance of either a UDP or TCP DNS listener.
@@ -81,7 +120,7 @@ func listenHandler(id, protocol, addr string, r Resolver, allowedNet []*net.IPNe
 		a := new(dns.Msg)
 		if isAllowed(allowedNet, ci.SourceIP) {
 			log.WithField("resolver", r.String()).Trace("forwarding query to resolver")
-			a, err = r.Resolve(req, ci)
+			a, err = r.Resolve(req, ci, nil)
 			if err != nil {
 				metrics.err.Add("resolve", 1)
 				log.WithError(err).Error("failed to resolve")

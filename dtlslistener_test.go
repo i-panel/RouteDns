@@ -32,7 +32,7 @@ func TestDTLSListener(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("example.com.", dns.TypeA)
-	_, err = c.Resolve(q, ClientInfo{})
+	_, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query

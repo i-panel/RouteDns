@@ -61,8 +61,8 @@ func NewResponseBlocklistIP(id string, resolver Resolver, opt ResponseBlocklistI
 
 // Resolve a DNS query by first querying the upstream resolver, then checking any IP responses
 // against a blocklist. Responds with NXDOMAIN if the response IP is in the filter-list.
-func (r *ResponseBlocklistIP) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
-	answer, err := r.resolver.Resolve(q, ci)
+func (r *ResponseBlocklistIP) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
+	answer, err := r.resolver.Resolve(q, ci, PanelSocksDialer)
 	if err != nil || answer == nil {
 		return answer, err
 	}
@@ -70,13 +70,18 @@ func (r *ResponseBlocklistIP) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, erro
 		return answer, err
 	}
 	if r.Filter {
-		return r.filterMatch(q, answer, ci)
+		return r.filterMatch(q, answer, ci, PanelSocksDialer)
 	}
-	return r.blockIfMatch(q, answer, ci)
+	return r.blockIfMatch(q, answer, ci, PanelSocksDialer)
 }
 
 func (r *ResponseBlocklistIP) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *ResponseBlocklistIP) CertMonitor() error {
+	return nil
 }
 
 func (r *ResponseBlocklistIP) refreshLoopBlocklist(refresh time.Duration) {
@@ -96,7 +101,7 @@ func (r *ResponseBlocklistIP) refreshLoopBlocklist(refresh time.Duration) {
 	}
 }
 
-func (r *ResponseBlocklistIP) blockIfMatch(query, answer *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ResponseBlocklistIP) blockIfMatch(query, answer *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	for _, records := range [][]dns.RR{answer.Answer, answer.Ns, answer.Extra} {
 		for _, rr := range records {
 			var ip net.IP
@@ -112,7 +117,7 @@ func (r *ResponseBlocklistIP) blockIfMatch(query, answer *dns.Msg, ci ClientInfo
 				log := logger(r.id, query, ci).WithFields(logrus.Fields{"list": match.GetList(), "rule": match.GetRule(), "ip": ip})
 				if r.BlocklistResolver != nil {
 					log.WithField("resolver", r.BlocklistResolver).Debug("blocklist match, forwarding to blocklist-resolver")
-					return r.BlocklistResolver.Resolve(query, ci)
+					return r.BlocklistResolver.Resolve(query, ci, PanelSocksDialer)
 				}
 				log.Debug("blocking response")
 				return nxdomain(query), nil
@@ -122,14 +127,14 @@ func (r *ResponseBlocklistIP) blockIfMatch(query, answer *dns.Msg, ci ClientInfo
 	return answer, nil
 }
 
-func (r *ResponseBlocklistIP) filterMatch(query, answer *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *ResponseBlocklistIP) filterMatch(query, answer *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	answer.Answer = r.filterRR(query, ci, answer.Answer)
 	// If there's nothing left after applying the filter, return NXDOMAIN or send to the alternative resolver
 	if len(answer.Answer) == 0 {
 		log := Log.WithFields(logrus.Fields{"qname": qName(query)})
 		if r.BlocklistResolver != nil {
 			log.WithField("resolver", r.BlocklistResolver).Debug("no answers after filtering, forwarding to blocklist-resolver")
-			return r.BlocklistResolver.Resolve(query, ci)
+			return r.BlocklistResolver.Resolve(query, ci, PanelSocksDialer)
 		}
 		log.Debug("no answers after filtering, blocking response")
 		return nxdomain(query), nil

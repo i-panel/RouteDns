@@ -9,35 +9,35 @@ import (
 	"github.com/XrayR-project/XrayR/common/mylego"
 )
 
-func GetCertFile(certConfig *mylego.CertConfig) (certFile string, keyFile string, err error) {
+func GetCertFile(certConfig *mylego.CertConfig) (certFile string, keyFile string, caFile string, err error) {
 	switch certConfig.CertMode {
 	case "file":
 		if certConfig.CertFile == "" || certConfig.KeyFile == "" {
-			return "", "", fmt.Errorf("cert file path or key file path not exist")
+			return "", "", "", fmt.Errorf("cert file path or key file path not exist")
 		}
-		return certConfig.CertFile, certConfig.KeyFile, nil
+		return certConfig.CertFile, certConfig.KeyFile, certConfig.CaFile, nil
 	case "dns":
 		lego, err := mylego.New(certConfig)
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
-		certPath, keyPath, err := lego.DNSCert()
+		certPath, keyPath, caPath, err := lego.DNSCert()
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
-		return certPath, keyPath, err
+		return certPath, keyPath, caPath, err
 	case "http", "tls":
 		lego, err := mylego.New(certConfig)
 		if err != nil {
-			return "", "", err
+			return "", "","", err
 		}
-		certPath, keyPath, err := lego.HTTPCert()
+		certPath, keyPath, caPath, err := lego.HTTPCert()
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
-		return certPath, keyPath, err
+		return certPath, keyPath, caPath, err
 	default:
-		return "", "", fmt.Errorf("unsupported certmode: %s", certConfig.CertMode)
+		return "", "", "", fmt.Errorf("unsupported certmode: %s", certConfig.CertMode)
 	}
 }
 

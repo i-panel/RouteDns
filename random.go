@@ -48,7 +48,7 @@ func NewRandom(id string, opt RandomOptions, resolvers ...Resolver) *Random {
 }
 
 // Resolve a DNS query using a random resolver.
-func (r *Random) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *Random) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
 	for {
 		resolver := r.pick()
@@ -59,7 +59,7 @@ func (r *Random) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 		r.metrics.route.Add(resolver.String(), 1)
 		log.WithField("resolver", resolver.String()).Debug("forwarding query to resolver")
-		a, err := resolver.Resolve(q, ci)
+		a, err := resolver.Resolve(q, ci, PanelSocksDialer)
 		if err == nil && r.isSuccessResponse(a) { // Return immediately if successful
 			return a, err
 		}
@@ -71,6 +71,11 @@ func (r *Random) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *Random) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *Random) CertMonitor() error {
+	return nil
 }
 
 // Pick a random resolver from the list of active ones.

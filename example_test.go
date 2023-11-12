@@ -16,7 +16,7 @@ func Example_resolver() {
 	q.SetQuestion("google.com.", dns.TypeA)
 
 	// Resolve the query
-	a, _ := r.Resolve(q, rdns.ClientInfo{})
+	a, _ := r.Resolve(q, rdns.ClientInfo{}, nil)
 	fmt.Println(a)
 }
 
@@ -33,7 +33,7 @@ func Example_group() {
 	q.SetQuestion("google.com.", dns.TypeA)
 
 	// Resolve the query
-	a, _ := g.Resolve(q, rdns.ClientInfo{})
+	a, _ := g.Resolve(q, rdns.ClientInfo{}, nil)
 	fmt.Println(a)
 }
 
@@ -54,6 +54,6 @@ func Example_router() {
 	q.SetQuestion("www.cloudflare.com.", dns.TypeA)
 
 	// Resolve the query
-	a, _ := r.Resolve(q, rdns.ClientInfo{})
+	a, _ := r.Resolve(q, rdns.ClientInfo{}, nil)
 	fmt.Println(a)
 }

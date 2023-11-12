@@ -26,7 +26,7 @@ func NewPanelRotate(id string, resolvers Resolver, panelResolvers ...Resolver) *
 
 // Resolve a DNS query by sending it to all resolvers and returning the fastest
 // non-error response
-func (r *PanelRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (r *PanelRotate) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	log := logger(r.id, q, ci)
 
 	type response struct {
@@ -41,7 +41,7 @@ func (r *PanelRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 	for _, resolver := range r.PanelResolvers {
 		resolver := resolver
 		go func() {
-			a, err := resolver.Resolve(q, ci)
+			a, err := resolver.Resolve(q, ci,PanelSocksDialer)
 			responseCh <- response{resolver, a, err}
 		}()
 	}
@@ -59,7 +59,7 @@ func (r *PanelRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 		// If all responses were bad, return the last one
 		if i++; i >= len(r.PanelResolvers) {
-			return a, err
+			return r.resolvers.Resolve(q, ci, PanelSocksDialer)
 		}
 	}
 	return nil, nil // should never be reached
@@ -67,4 +67,9 @@ func (r *PanelRotate) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
 
 func (r *PanelRotate) String() string {
 	return r.id
+}
+
+// Check Cert
+func (s *PanelRotate) CertMonitor() error {
+	return nil
 }

@@ -37,7 +37,7 @@ func TestDoHListenerSimple(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = cPost.Resolve(q, ClientInfo{})
+	_, err = cPost.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query
@@ -49,7 +49,7 @@ func TestDoHListenerSimple(t *testing.T) {
 	require.NoError(t, err)
 
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
-	_, err = cGet.Resolve(q, ClientInfo{})
+	_, err = cGet.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query
@@ -91,7 +91,7 @@ func TestDoHListenerMutual(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = c.Resolve(q, ClientInfo{})
+	_, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query
@@ -125,7 +125,7 @@ func TestDoHListenerMutualQUIC(t *testing.T) {
 	// Send a query to the client. This should be proxied through the listener and hit the test resolver.
 	q := new(dns.Msg)
 	q.SetQuestion("cloudflare.com.", dns.TypeA)
-	_, err = c.Resolve(q, ClientInfo{})
+	_, err = c.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 
 	// The upstream resolver should have seen the query

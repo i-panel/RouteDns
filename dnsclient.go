@@ -34,10 +34,16 @@ type DNSClientOptions struct {
 	QueryTimeout time.Duration
 
 	// Optional dialer, e.g. proxy
-	Dialer Dialer
+	Dialer           Dialer
+	PanelSocksDialer *Socks5Dialer
 }
 
 var _ Resolver = &DNSClient{}
+
+// Check Cert
+func (s *DNSClient) CertMonitor() error {
+	return nil
+}
 
 // NewDNSClient returns a new instance of DNSClient which is a plain DNS resolver
 // that supports pipelining over a single connection.
@@ -46,11 +52,12 @@ func NewDNSClient(id, endpoint, network string, opt DNSClientOptions) (*DNSClien
 		return nil, err
 	}
 	client := GenericDNSClient{
-		Net:       network,
-		Dialer:    opt.Dialer,
-		TLSConfig: &tls.Config{},
-		LocalAddr: opt.LocalAddr,
-		Timeout:   opt.QueryTimeout,
+		Net:              network,
+		Dialer:           opt.Dialer,
+		PanelSocksDialer: opt.PanelSocksDialer,
+		TLSConfig:        &tls.Config{},
+		LocalAddr:        opt.LocalAddr,
+		Timeout:          opt.QueryTimeout,
 	}
 	return &DNSClient{
 		id:       id,
@@ -62,7 +69,7 @@ func NewDNSClient(id, endpoint, network string, opt DNSClientOptions) (*DNSClien
 }
 
 // Resolve a DNS query.
-func (d *DNSClient) Resolve(q *dns.Msg, ci ClientInfo) (*dns.Msg, error) {
+func (d *DNSClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5Dialer) (*dns.Msg, error) {
 	// Packing a message is not always a read-only operation, make a copy
 	q = q.Copy()
 
@@ -86,11 +93,12 @@ func (d *DNSClient) String() string {
 // (only *net.Dialer) which prevents the use of proxies. It implements the same
 // Dial functionality, while supporting custom dialers.
 type GenericDNSClient struct {
-	Dialer    Dialer
-	Net       string
-	TLSConfig *tls.Config
-	LocalAddr net.IP
-	Timeout   time.Duration
+	Dialer           Dialer
+	PanelSocksDialer *Socks5Dialer
+	Net              string
+	TLSConfig        *tls.Config
+	LocalAddr        net.IP
+	Timeout          time.Duration
 }
 
 func (d GenericDNSClient) Dial(address string) (*dns.Conn, error) {
@@ -113,6 +121,10 @@ func (d GenericDNSClient) Dial(address string) (*dns.Conn, error) {
 		} else {
 			dialer = &net.Dialer{}
 		}
+	}
+
+	if d.PanelSocksDialer != nil {
+		dialer = d.PanelSocksDialer
 	}
 
 	var (

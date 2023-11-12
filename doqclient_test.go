@@ -13,7 +13,7 @@ func TestDOQSimple(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("google.com.", dns.TypeA)
 	id := q.Id
-	r, err := d.Resolve(q, ClientInfo{})
+	r, err := d.Resolve(q, ClientInfo{}, nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, r.Answer)
 	require.Equal(t, id, r.Id)
@@ -25,7 +25,7 @@ func TestDOQError(t *testing.T) {
 	q := new(dns.Msg)
 	q.SetQuestion("google.com.", dns.TypeA)
 	id := q.Id
-	_, err = d.Resolve(q, ClientInfo{})
+	_, err = d.Resolve(q, ClientInfo{}, nil)
 	require.Error(t, err)
 	require.Equal(t, id, q.Id) // Shouldn't touch the ID in the query
 }
