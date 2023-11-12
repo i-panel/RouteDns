@@ -231,6 +231,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/XrayR-project/XrayR => github.com/kontorol/XrayR v0.9.1
+replace github.com/XrayR-project/XrayR => github.com/kontorol/XrayR v0.9.2
 
 replace github.com/xtls/xray-core => github.com/kontorol/xray-core v1.8.5-0.20231112215239-65402f46f25d

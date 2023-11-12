@@ -498,8 +498,8 @@ github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b h1:udzkj9S/zlT5X367kqJ
 github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b/go.mod h1:pcaDhQK0/NJZEvtCO0qQPPropqV0sJOJ6YW7X+9kRwM=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
-github.com/kontorol/XrayR v0.9.1 h1:+ybmQl68Ef82SkIEg/KcpD1x7wq++dFOetlrb8A54tQ=
-github.com/kontorol/XrayR v0.9.1/go.mod h1:aLbzJ3zdLhnSYjltprA3i9injatSGpzC3sgdTEbCS0o=
+github.com/kontorol/XrayR v0.9.2 h1:fHgW7N4ust/+Zni2AYa0wBCq3xAIUvGi/lD1Vnra7ms=
+github.com/kontorol/XrayR v0.9.2/go.mod h1:C+HJUdXGy0SHBBejxUuV49FTAINdwuziFF6fAf1nAKs=
 github.com/kontorol/xray-core v1.8.5-0.20231112215239-65402f46f25d h1:dx0hvp1vQVht3ZARycm5l/YGU6u4w8yYA70xAWuqEcQ=
 github.com/kontorol/xray-core v1.8.5-0.20231112215239-65402f46f25d/go.mod h1:Q3hmNkYA4CRVLGEV8NXxgjX1SnCQq/MAr2YIp4PNpRs=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
