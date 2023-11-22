@@ -46,8 +46,7 @@ type PanelDB struct {
 	BlocklistDB   BlocklistDB
 	IpAllowlistDB IPBlocklistDB
 	Socks5Dialer  Socks5Dialer
-	Spoof4        net.IP
-	Spoof6        net.IP
+	Spoof         []net.IP
 }
 
 // Blocklist is a resolver that returns NXDOMAIN or a spoofed IP for every query that
@@ -110,7 +109,7 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 		}
 	}
 
-	ip, names, match, ok := blocklistDB.Match(question)
+	ips, names, match, ok := blocklistDB.Match(question)
 	if ok {
 		log = log.WithFields(logrus.Fields{"list": match.List, "rule": match.Rule})
 		r.metrics.blocked.Add(1)
@@ -135,9 +134,11 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 		answer.SetReply(q)
 
 		// We have an IP address to return, make sure it's of the right type. If not return NXDOMAIN.
-		if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
-			answer.Answer = []dns.RR{
-				&dns.A{
+		var spoof []dns.RR
+		// We have an IP address to return, make sure it's of the right type. If not return NXDOMAIN.
+		for _, ip := range ips {
+			if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
+				spoof = append(spoof, &dns.A{
 					Hdr: dns.RR_Header{
 						Name:   question.Name,
 						Rrtype: dns.TypeA,
@@ -145,13 +146,9 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 						Ttl:    3600,
 					},
 					A: ip,
-				},
-			}
-			log.Debug("spoofing response")
-			return answer, nil
-		} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
-			answer.Answer = []dns.RR{
-				&dns.AAAA{
+				})
+			} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
+				spoof = append(spoof, &dns.AAAA{
 					Hdr: dns.RR_Header{
 						Name:   question.Name,
 						Rrtype: dns.TypeAAAA,
@@ -159,9 +156,12 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 						Ttl:    3600,
 					},
 					AAAA: ip,
-				},
+				})
 			}
+		}
+		if len(spoof) > 0 {
 			log.Debug("spoofing response")
+			answer.Answer = spoof
 			return answer, nil
 		}
 
@@ -173,7 +173,7 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 
 	// Forward to upstream or the optional allowlist-resolver immediately if there's a match in the allowlist
 	if allowlistDB != nil {
-		if ip, _, match, ok := allowlistDB.Match(question); ok {
+		if ips, _, match, ok := allowlistDB.Match(question); ok {
 			log = log.WithFields(logrus.Fields{"list": match.List, "rule": match.Rule})
 			r.metrics.allowed.Add(1)
 			if r.AllowListResolver != nil {
@@ -183,10 +183,11 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 
 			answer := new(dns.Msg)
 			answer.SetReply(q)
+			var allowSpoof []dns.RR
 			// We have an IP address to return, make sure it's of the right type. If not return NXDOMAIN.
-			if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
-				answer.Answer = []dns.RR{
-					&dns.A{
+			for _, ip := range ips {
+				if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
+					allowSpoof = append(allowSpoof, &dns.A{
 						Hdr: dns.RR_Header{
 							Name:   question.Name,
 							Rrtype: dns.TypeA,
@@ -194,13 +195,9 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 							Ttl:    3600,
 						},
 						A: ip,
-					},
-				}
-				log.Debug("spoofing response")
-				return answer, nil
-			} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
-				answer.Answer = []dns.RR{
-					&dns.AAAA{
+					})
+				} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
+					allowSpoof = append(allowSpoof, &dns.AAAA{
 						Hdr: dns.RR_Header{
 							Name:   question.Name,
 							Rrtype: dns.TypeAAAA,
@@ -208,9 +205,12 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 							Ttl:    3600,
 						},
 						AAAA: ip,
-					},
+					})
 				}
+			}
+			if len(allowSpoof) > 0 {
 				log.Debug("spoofing response")
+				answer.Answer = allowSpoof
 				return answer, nil
 			}
 			// log.WithField("resolver", r.resolver.String()).Debug("matched allowlist, forwarding")
@@ -218,37 +218,37 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 		}
 	}
 
-	if r.DB.Spoof4 != nil || r.DB.Spoof6 != nil {
+	if r.DB.Spoof != nil {
 		answer := new(dns.Msg)
 		answer.SetReply(q)
+		var hardSpoof []dns.RR
 		// We have an IP address to return, make sure it's of the right type. If not return NXDOMAIN.
-		if ip4 := r.DB.Spoof4.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
-			answer.Answer = []dns.RR{
-				&dns.A{
+		for _, ip := range r.DB.Spoof {
+			if ip4 := ip.To4(); len(ip4) == net.IPv4len && question.Qtype == dns.TypeA {
+				hardSpoof = append(hardSpoof, &dns.A{
 					Hdr: dns.RR_Header{
 						Name:   question.Name,
 						Rrtype: dns.TypeA,
 						Class:  question.Qclass,
 						Ttl:    3600,
 					},
-					A: r.DB.Spoof4,
-				},
+					A: ip,
+				})
+			} else if len(ip) == net.IPv6len && question.Qtype == dns.TypeAAAA {
+				hardSpoof = append(hardSpoof, &dns.AAAA{
+						Hdr: dns.RR_Header{
+							Name:   question.Name,
+							Rrtype: dns.TypeAAAA,
+							Class:  question.Qclass,
+							Ttl:    3600,
+						},
+						AAAA: ip,
+					})
 			}
+		}
+		if len(hardSpoof) > 0 {
 			log.Debug("spoofing response")
-			return answer, nil
-		} else if len(r.DB.Spoof6) == net.IPv6len && question.Qtype == dns.TypeAAAA {
-			answer.Answer = []dns.RR{
-				&dns.AAAA{
-					Hdr: dns.RR_Header{
-						Name:   question.Name,
-						Rrtype: dns.TypeAAAA,
-						Class:  question.Qclass,
-						Ttl:    3600,
-					},
-					AAAA: r.DB.Spoof6,
-				},
-			}
-			log.Debug("spoofing response")
+			answer.Answer = hardSpoof
 			return answer, nil
 		}
 	}
@@ -318,14 +318,14 @@ func (r *Panellist) refreshLoop(refresh time.Duration) (err error) {
 							int(5*time.Second),
 						)
 						if err == nil {
-								r.DB.Socks5Dialer = Socks5Dialer{Client: client, opt: Socks5DialerOptions{
-									Username:     newNodeInfo.RouteDNS.Socks5.Username,
-									Password:     newNodeInfo.RouteDNS.Socks5.Password,
-									TCPTimeout:   0,
-									UDPTimeout:   5 * time.Second,
-									ResolveLocal: newNodeInfo.RouteDNS.Socks5.ResolveLocal,
-									LocalAddr:    net.ParseIP(newNodeInfo.RouteDNS.Socks5.LocalAddr),
-								}}
+							r.DB.Socks5Dialer = Socks5Dialer{Client: client, opt: Socks5DialerOptions{
+								Username:     newNodeInfo.RouteDNS.Socks5.Username,
+								Password:     newNodeInfo.RouteDNS.Socks5.Password,
+								TCPTimeout:   0,
+								UDPTimeout:   5 * time.Second,
+								ResolveLocal: newNodeInfo.RouteDNS.Socks5.ResolveLocal,
+								LocalAddr:    net.ParseIP(newNodeInfo.RouteDNS.Socks5.LocalAddr),
+							}}
 						}
 					}
 					nodeInfoChanged = true

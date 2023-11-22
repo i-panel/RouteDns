@@ -65,7 +65,7 @@ func (m *DomainXDB) Reload() (BlocklistDB, error) {
 	return NewDomainXDB(m.name, m.loader)
 }
 
-func (m *DomainXDB) Match(q dns.Question) (net.IP, []string, *BlocklistMatch, bool) {
+func (m *DomainXDB) Match(q dns.Question) ([]net.IP, []string, *BlocklistMatch, bool) {
 	s := strings.TrimSuffix(q.Name, ".")
 	
 

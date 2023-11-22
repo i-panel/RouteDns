@@ -131,19 +131,22 @@ func (l *PanelLoader) Get() (RouteDNS *PanelDB, err error) {
 
 	log.WithField("load-time", time.Since(start)).Trace("completed loading blocklist")
 
-	Spoof4 := net.ParseIP(Nodes.RouteDNS.Spoof4)
-	if Nodes.RouteDNS.Spoof4 != "" && Spoof4 == nil {
-		return nil, fmt.Errorf("spoof4 format error")
-	}
-	Spoof6 := net.ParseIP(Nodes.RouteDNS.Spoof6)
-	if Nodes.RouteDNS.Spoof6 != "" && Spoof6 == nil {
-		return nil, fmt.Errorf("spoof6 format error")
+	var Spoof []net.IP
+	for _, ip := range Nodes.RouteDNS.Spoof {
+		IP := net.ParseIP(ip)
+		if ip4 := IP.To4(); len(ip4) == net.IPv4len {
+			Spoof = append(Spoof, IP)
+		} else if len(ip) == net.IPv6len {
+			Spoof = append(Spoof, IP)
+		}
+
+		if ip != "" && IP == nil {
+			return nil, fmt.Errorf("spoof format error")
+		}
 	}
 
-	
 	res := &PanelDB{
-		Spoof4:        Spoof4,
-		Spoof6:        Spoof6,
+		Spoof:         Spoof,
 		AllowlistDB:   AllowlistDB,
 		BlocklistDB:   BlocklistDB,
 		IpAllowlistDB: IPAllowlistDB,

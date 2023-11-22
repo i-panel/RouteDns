@@ -11,6 +11,7 @@ import (
 	"github.com/XrayR-project/XrayR/api/sspanel"
 	rdns "github.com/folbricht/routedns"
 	"github.com/heimdalr/dag"
+	"github.com/miekg/dns"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -550,12 +551,20 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver, pn
 		}
 
 	case "static-responder":
+		var edns0Options []dns.EDNS0
+		if g.EDNS0EDE != nil {
+			edns0Options = append(edns0Options, &dns.EDNS0_EDE{
+				InfoCode:  g.EDNS0EDE.Code,
+				ExtraText: g.EDNS0EDE.Text,
+			})
+		}
 		opt := rdns.StaticResolverOptions{
-			Answer:   g.Answer,
-			NS:       g.NS,
-			Extra:    g.Extra,
-			RCode:    g.RCode,
-			Truncate: g.Truncate,
+			Answer:       g.Answer,
+			NS:           g.NS,
+			Extra:        g.Extra,
+			RCode:        g.RCode,
+			Truncate:     g.Truncate,
+			EDNS0Options: edns0Options,
 		}
 		resolvers[id], err = rdns.NewStaticResolver(id, opt)
 		if err != nil {

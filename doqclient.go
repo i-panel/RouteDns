@@ -99,6 +99,7 @@ func NewDoQClient(id, endpoint string, opt DoQClientOptions) (*DoQClient, error)
 			tlsConfig: tlsConfig,
 			config: &quic.Config{
 				TokenStore: quic.NewLRUTokenStore(10, 10),
+				HandshakeIdleTimeout: opt.QueryTimeout,
 			},
 		},
 		metrics: NewListenerMetrics("client", id),
@@ -134,6 +135,8 @@ func (d *DoQClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 		edns0.Option = newOpt
 	}
 
+	deadlineTime := time.Now().Add(d.DoQClientOptions.QueryTimeout)
+
 	// Encode the query
 	p, err := qc.Pack()
 	if err != nil {
@@ -154,7 +157,7 @@ func (d *DoQClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 	}
 
 	// Write the query into the stream and close it. Only one stream per query/response
-	_ = stream.SetWriteDeadline(time.Now().Add(d.DoQClientOptions.QueryTimeout))
+	_ = stream.SetWriteDeadline(deadlineTime)
 	if _, err = stream.Write(b); err != nil {
 		d.metrics.err.Add("write", 1)
 		return nil, err
@@ -164,7 +167,7 @@ func (d *DoQClient) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 		return nil, err
 	}
 
-	_ = stream.SetReadDeadline(time.Now().Add(d.DoQClientOptions.QueryTimeout))
+	_ = stream.SetReadDeadline(deadlineTime)
 
 	// DoQ requires a length prefix, like TCP
 	var length uint16
@@ -224,7 +227,7 @@ func (s *quicConnection) getStream(endpoint string, log *logrus.Entry) (quic.Str
 
 	// If we can't get a stream then restart the connection and try again once
 	stream, err := s.EarlyConnection.OpenStream()
-	if netErr, ok := err.(net.Error); ok && (netErr.Timeout() || netErr.Temporary()) {
+	if err != nil {
 		log.WithError(err).Debug("temporary fail when trying to open stream, attempting new connection")
 		if err = quicRestart(s); err != nil {
 			log.WithFields(logrus.Fields{

@@ -68,7 +68,7 @@ func (m *HostsXDB) Reload() (BlocklistDB, error) {
 	return NewHostsXDB(m.name, m.loader)
 }
 
-func (m *HostsXDB) Match(q mdns.Question) (net.IP, []string, *BlocklistMatch, bool) {
+func (m *HostsXDB) Match(q mdns.Question) ([]net.IP, []string, *BlocklistMatch, bool) {
 
 	domain := strings.TrimSuffix(q.Name, ".")
 	if domain == "" {
@@ -89,7 +89,7 @@ func (m *HostsXDB) Match(q mdns.Question) (net.IP, []string, *BlocklistMatch, bo
 	}
 	// Static host lookup
 	ips, err := toNetIP(match)
-	return ips[0],
+	return ips,
 		nil,
 		&BlocklistMatch{
 			List: m.name,
