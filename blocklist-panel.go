@@ -310,13 +310,13 @@ func (r *Panellist) refreshLoop(refresh time.Duration) (err error) {
 			if !reflect.DeepEqual(r.Loader.opt.NodeInfo.RouteDNS, newNodeInfo.RouteDNS) {
 				if !reflect.DeepEqual(r.Loader.opt.NodeInfo.RouteDNS.Socks5, newNodeInfo.RouteDNS.Socks5) {
 					if newNodeInfo.RouteDNS.Socks5.Socks5Address != "" {
-						timeout := int(5 * time.Second)
+						timeout := 5 * time.Second
 						client, err := socks5.NewClient(
 							newNodeInfo.RouteDNS.Socks5.Socks5Address,
 							newNodeInfo.RouteDNS.Socks5.Username,
 							newNodeInfo.RouteDNS.Socks5.Password,
 							0,
-							timeout,
+							int(timeout),
 						)
 						if err == nil {
 							r.DB.Socks5Dialer = Socks5Dialer{Client: client, opt: Socks5DialerOptions{
