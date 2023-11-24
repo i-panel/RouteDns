@@ -131,9 +131,8 @@ jobs:
           command: |
             cp ${GITHUB_WORKSPACE}/README.md ./build_assets/README.md
             cp ${GITHUB_WORKSPACE}/LICENSE ./build_assets/LICENSE
-            cp ${GITHUB_WORKSPACE}/doc/ ./build_assets/doc/
-            
-            cp ${GITHUB_WORKSPACE}/cmd/routedns/example-config/ ./build_assets/example-config/
+            cp -r ${GITHUB_WORKSPACE}/doc ./build_assets/            
+            cp -r ${GITHUB_WORKSPACE}/cmd/routedns/example-config ./build_assets/
 
             LIST=('geoip geoip' 'geosite geosite')
             for i in "${LIST[@]}"
