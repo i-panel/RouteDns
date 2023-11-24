@@ -97,12 +97,13 @@ func (l *PanelLoader) Get() (RouteDNS *PanelDB, err error) {
 	var client *socks5.Client
 	isdialer := false
 	if Nodes.RouteDNS.Socks5.Socks5Address != "" {
+		timeout := int(5 * time.Second)
 		client, err = socks5.NewClient(
 			Nodes.RouteDNS.Socks5.Socks5Address,
 			Nodes.RouteDNS.Socks5.Username,
 			Nodes.RouteDNS.Socks5.Password,
 			0,
-			int(5*time.Second),
+			timeout,
 		)
 		if err != nil {
 			return nil, err
