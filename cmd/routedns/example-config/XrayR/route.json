@@ -1,0 +1,37 @@
+{
+    "domainStrategy": "IPOnDemand",
+    "rules": [
+        {
+            "type": "field",
+            "outboundTag": "block",
+            "ip": [
+                "geoip:private"
+            ]
+        },
+        {
+            "type": "field",
+            "outboundTag": "block",
+            "protocol": [
+                "bittorrent"
+            ]
+        },
+        {
+            "type": "field",
+            "inboundTag": ["Http_0.0.0.0_80","Http_0.0.0.0_443"],
+            "outboundTag": "warp"
+        },
+        {
+            "type": "field",
+            "outboundTag": "warp",
+            "domain": [
+                "geosite:openai",
+                "geosite:netflix",
+                "geosite:spotify",
+                "geosite:anthropic",
+                "geosite:twitter",
+                "geosite:telegram",
+                "geosite:meta"
+            ]
+        }
+    ]
+}
