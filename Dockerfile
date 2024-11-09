@@ -33,17 +33,18 @@ RUN curl -L "https://raw.githubusercontent.com/chocolate4u/Iran-v2ray-rules/rele
 RUN curl -L "https://raw.githubusercontent.com/chocolate4u/Iran-v2ray-rules/release/geosite.dat" -o "/build/cmd/routedns/geosite.dat"
 
 
-FROM alpine:latest
+FROM alpine:latest as routedns
 RUN  apk --update --no-cache add tzdata ca-certificates \
     && cp /usr/share/zoneinfo/Asia/Tehran /etc/localtime
 
 COPY --from=builder /build/cmd/routedns/routedns .
 COPY cmd/routedns/example-config/blocklist-panel.toml config.toml
 EXPOSE 53/tcp 53/udp
-# ENTRYPOINT ["/routedns"]
-# CMD ["config.toml"]
+ENTRYPOINT ["/routedns"]
+CMD ["config.toml"]
 
 
+FROM routedns as routednsxtls
 # RUN mkdir /etc/XrayR/
 COPY --from=xrayr-builder /app/XrayR /usr/local/bin
 COPY --from=xrayr-builder /app/release/config /etc/XrayR
