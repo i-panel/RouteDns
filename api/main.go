@@ -37,9 +37,8 @@ var onClose []func()
 
 
 // Instantiate a group object based on configuration and add to the map of resolvers by ID.
-func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver, pnr []string) error {
+func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver) error {
 	var gr []rdns.Resolver
-	var pgr []rdns.Resolver
 	var err error
 	for _, rid := range g.Resolvers {
 		resolver, ok := resolvers[rid]
@@ -66,14 +65,7 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver, pn
 		if len(gr) != 1 {
 			return fmt.Errorf("type panel-rotate only supports one resolver in '%s'", id)
 		}
-		for _, rid := range pnr {
-			pResolver, ok := resolvers[rid]
-			if !ok {
-				return fmt.Errorf("group '%s' references non-existent resolver or group '%s'", id, rid)
-			}
-			pgr = append(pgr, pResolver)
-		}
-		resolvers[id] = rdns.NewPanelRotate(id, gr[0], pgr...)
+		resolvers[id] = rdns.NewPanelRotate(id, gr[0])
 	case "fastest":
 		resolvers[id] = rdns.NewFastest(id, gr...)
 	case "random":
@@ -184,7 +176,7 @@ func instantiateGroup(id string, g group, resolvers map[string]rdns.Resolver, pn
 
 		opt := rdns.PanellistOptions{
 			Loader:              loader,
-			Refresh:             time.Duration(g.PanelRefresh) * time.Second,
+			Refresh:             time.Duration(g.PanelRefresh) * time.Minute,
 			DB:                  panelDB,
 			AllowListResolver:   resolvers[g.AllowListResolver],
 			BlockListResolver:   resolvers[g.BlockListResolver],

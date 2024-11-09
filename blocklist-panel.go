@@ -95,7 +95,13 @@ func (r *Panellist) Resolve(q *dns.Msg, ci ClientInfo, PanelSocksDialer *Socks5D
 
 	// Forward to upstream or the optional ipallowlist-resolver immediately if there's a match in the ipallowlist
 	if ipallowlistDB != nil {
-		if match, ok := ipallowlistDB.Match(ci.SourceIP); !ok {
+		ip := ci.SourceIP
+		if ip4 := ci.SourceIP.To4(); ip4 != nil {
+			ip = ip4
+		} else if ip6 := ci.SourceIP.To16(); ip6 != nil {
+			ip = ip6
+		}
+		if match, ok := ipallowlistDB.Match(ip); !ok {
 			log := Log.WithFields(logrus.Fields{"id": r.id, "qname": qName(q), "list": match.List, "rule": match.Rule, "ip": ci.SourceIP})
 
 			if r.IpAllowListResolver != nil {

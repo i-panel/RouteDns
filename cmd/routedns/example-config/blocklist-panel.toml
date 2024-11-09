@@ -1,14 +1,15 @@
 [resolvers.cloudflare-dot]
-address = "1.1.1.1:853"
-protocol = "dot"
+address = "1.1.1.1:53"
+protocol = "udp"
 
-[groups.node]
+[groups.node10]
 type                = "blocklist-panel"
+panel-refresh       = 1
 resolvers           = ["cloudflare-dot"] # Anything that passes the filter is sent on to this resolver
 allowlist-format    = "hostsx"            # "domain(x)", "hosts(x)" or "regexp", defaults to "regexp"
 blocklist-format    = "domainx"            # "domain(x)", "hosts(x)" or "regexp", defaults to "regexp"
 ipallowlist-format    = "cidr"            # "location", "cidr"(default)
-api = { ApiHost="http://127.0.0.1", NodeID=1, Key="SSPANEL" }
+api = { ApiHost="https://127.0.0.1", NodeID=10, Key="SSPANEL"}
 
 [groups.cloudflare-blocklist]
 type                = "panel-rotate"

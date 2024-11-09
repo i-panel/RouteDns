@@ -112,14 +112,30 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			return nil, err
 		}
 	}
+
+	var pgm []string
+	var pm []string
 	for id, v := range config.Groups {
 		node := &Node{id, v}
+		if v.Type == "blocklist-panel" {
+			pgm = append(pgm, id)
+		}
+		if v.Type == "panel-rotate" {
+			pm = append(pm, id)
+		}
 		_, err := graph.AddVertex(node)
 		if err != nil {
 			return nil, err
 		}
 		edges[id] = append(v.Resolvers, v.AllowListResolver, v.BlockListResolver, v.LimitResolver, v.RetryResolver)
 	}
+
+	if len(pgm) > 0 && len(pm) == 0 {
+		return nil, fmt.Errorf("%d blocklist-panel found but panel-rotate not found", len(pgm))
+	} else if len(pgm) > 0 && len(pm) > 1 {
+		return nil, fmt.Errorf("currently only one panel-rotate is supported, found %d", len(pgm))
+	}
+	
 	for id, v := range config.Routers {
 		node := &Node{id, v}
 		_, err := graph.AddVertex(node)
@@ -151,33 +167,6 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 	// Instantiate the elements from leaves to the root nodes
 	for graph.GetOrder() > 0 {
 		leaves := graph.GetLeaves()
-		var pgm []string
-		for id, v := range leaves {
-			node := v.(*Node)
-			if g, ok := node.value.(group); ok {
-				if g.Type == "blocklist-panel" {
-					pgm = append(pgm, id)
-					break
-				}
-			}
-		}
-		if len(pgm) > 0 {
-			var pm []group
-			for _, v := range leaves {
-				node := v.(*Node)
-				if g, ok := node.value.(group); ok {
-					if g.Type == "panel-rotate" {
-						pm = append(pm, g)
-					}
-				}
-			}
-			if len(pm) == 0 {
-				return nil, fmt.Errorf("%d blocklist-panel found but panel-rotate not found", len(pgm))
-			} else if len(pm) > 1 {
-				return nil, fmt.Errorf("currently only one panel-rotate is supported, found %d", len(pgm))
-			}
-		}
-
 		for id, v := range leaves {
 			node := v.(*Node)
 			if r, ok := node.value.(resolver); ok {
@@ -194,7 +183,7 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 				}
 			}
 			if g, ok := node.value.(group); ok {
-				if err := instantiateGroup(id, g, resolvers, pgm); err != nil {
+				if err := instantiateGroup(id, g, resolvers); err != nil {
 					return nil, err
 				}
 			}
@@ -205,6 +194,14 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 			}
 			if err := graph.DeleteVertex(id); err != nil {
 				return nil, err
+			}
+		}
+	}
+	if len(pgm) > 0 && len(pm) > 0 {
+		if pr, ok := resolvers[pm[0]].(*rdns.PanelRotate); ok {
+			for id := range pgm {
+				pr.PanelResolvers = append(pr.PanelResolvers, resolvers[pgm[id]])
+				delete(resolvers, pgm[id])
 			}
 		}
 	}

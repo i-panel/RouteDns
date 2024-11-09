@@ -16,11 +16,10 @@ var _ Resolver = &PanelRotate{}
 
 // NewFastest returns a new instance of a resolver group that returns the fastest
 // response from all its resolvers.
-func NewPanelRotate(id string, resolvers Resolver, panelResolvers ...Resolver) *PanelRotate {
+func NewPanelRotate(id string, resolvers Resolver) *PanelRotate {
 	return &PanelRotate{
 		id:        id,
 		resolvers: resolvers,
-		PanelResolvers: panelResolvers,
 	}
 }
 
