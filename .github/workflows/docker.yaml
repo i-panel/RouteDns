@@ -1,22 +1,22 @@
 name: publish
 on: [push]
 jobs:
-publish-hello-docker-image:
-runs-on: ubuntu-latest
-steps:
-  - name: Checkout code
-    uses: actions/checkout@v2
+  publish-hello-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  - name: Login to GitHub Container Registry
-    uses: docker/login-action@v1
-    with:
-      registry: ghcr.io
-      username: ${{ github.actor }}
-      password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  - name: Build and Push Docker Image
-    run: |
-      docker build --target routedns . --tag ghcr.io/i-panel/routedns:latest
-      docker push ghcr.io/i-panel/routedns:latest
-      docker build --target routednsxtls . --tag ghcr.io/i-panel/routedns:xtls-latest
-      docker push ghcr.io/i-panel/routedns:xtls-latest
+      - name: Build and Push Docker Image
+        run: |
+          docker build --target routedns . --tag ghcr.io/i-panel/routedns:latest
+          docker push ghcr.io/i-panel/routedns:latest
+          docker build --target routednsxtls . --tag ghcr.io/i-panel/routedns:xtls-latest
+          docker push ghcr.io/i-panel/routedns:xtls-latest
