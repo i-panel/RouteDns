@@ -16,8 +16,9 @@ WORKDIR /build
 COPY . .
 WORKDIR cmd/routedns
 RUN GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build
+
 # Use an official Ubuntu base image
-FROM ubuntu:latest
+FROM ubuntu:latest AS downloader
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -29,6 +30,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geoip.dat" -o "/build/cmd/routedns/geoip.dat"
+RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geosite.dat" -o "/build/cmd/routedns/geosite.dat"
 
 
 FROM alpine:latest as routedns
@@ -36,8 +39,8 @@ RUN  apk --update --no-cache add tzdata ca-certificates \
     && cp /usr/share/zoneinfo/Asia/Tehran /etc/localtime
 
 COPY --from=builder /build/cmd/routedns/routedns .
-RUN curl -L "https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geoip.dat" -o "/geoip.dat"
-RUN curl -L "https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geosite.dat" -o "/geosite.dat"
+COPY --from=downloader /build/cmd/routedns/geoip.dat .
+COPY --from=downloader /build/cmd/routedns/geosite.dat .
 RUN mkdir /etc/rdns/
 COPY cmd/routedns/example-config/blocklist-panel.toml /etc/rdns/config.toml
 EXPOSE 53/tcp 53/udp
