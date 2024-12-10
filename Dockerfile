@@ -15,6 +15,7 @@ ARG GOARCH
 WORKDIR /build
 COPY . .
 WORKDIR cmd/routedns
+RUN apk add --no-cache curl
 RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geoip.dat" -o "/build/cmd/routedns/geoip.dat"
 RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geosite.dat" -o "/build/cmd/routedns/geosite.dat"
 RUN GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build
