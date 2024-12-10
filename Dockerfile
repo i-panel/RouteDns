@@ -38,10 +38,11 @@ RUN  apk --update --no-cache add tzdata ca-certificates \
     && cp /usr/share/zoneinfo/Asia/Tehran /etc/localtime
 
 COPY --from=builder /build/cmd/routedns/routedns .
-COPY cmd/routedns/example-config/blocklist-panel.toml config.toml
+RUN mkdir /etc/rdns/
+COPY cmd/routedns/example-config/blocklist-panel.toml /etc/rdns/config.toml
 EXPOSE 53/tcp 53/udp
 ENTRYPOINT ["/routedns"]
-CMD ["config.toml"]
+CMD ["/etc/rdns/config.toml"]
 
 
 FROM routedns as routednsxtls
@@ -53,7 +54,7 @@ COPY --from=xrayr-builder /app/release/config /etc/XrayR
 COPY cmd/routedns/example-config/XrayR/custom_outbound.json /etc/XrayR/custom_outbound.json
 COPY cmd/routedns/example-config/XrayR/route.json /etc/XrayR/route.json
 
-ENTRYPOINT ["/bin/sh", "-c", "envsubst < cmd/routedns/example-config/XrayR/config.yml.template > /etc/XrayR/config.yml && /routedns config.toml & exec XrayR --config /etc/XrayR/config.yml"]
+ENTRYPOINT ["/bin/sh", "-c", "envsubst < cmd/routedns/example-config/XrayR/config.yml.template > /etc/XrayR/config.yml && /routedns /etc    /rdns/config.toml & exec XrayR --config /etc/XrayR/config.yml"]
 
 # Default environment variables
 ENV PANEL_TYPE=SSpanel
