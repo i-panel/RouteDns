@@ -38,6 +38,8 @@ RUN  apk --update --no-cache add tzdata ca-certificates \
     && cp /usr/share/zoneinfo/Asia/Tehran /etc/localtime
 
 COPY --from=builder /build/cmd/routedns/routedns .
+COPY --from=builder /build/cmd/routedns/geoip.dat .
+COPY --from=builder /build/cmd/routedns/geosite.dat .
 RUN mkdir /etc/rdns/
 COPY cmd/routedns/example-config/blocklist-panel.toml /etc/rdns/config.toml
 EXPOSE 53/tcp 53/udp
