@@ -54,7 +54,7 @@ COPY --from=xrayr-builder /app/release/config /etc/XrayR
 COPY cmd/routedns/example-config/XrayR/custom_outbound.json /etc/XrayR/custom_outbound.json
 COPY cmd/routedns/example-config/XrayR/route.json /etc/XrayR/route.json
 
-ENTRYPOINT ["/bin/sh", "-c", "envsubst < cmd/routedns/example-config/XrayR/config.yml.template > /etc/XrayR/config.yml && /routedns /etc    /rdns/config.toml & exec XrayR --config /etc/XrayR/config.yml"]
+ENTRYPOINT ["/bin/sh", "-c", "envsubst < cmd/routedns/example-config/XrayR/config.yml.template > /etc/XrayR/config.yml && /routedns /etc/rdns/config.toml & exec XrayR --config /etc/XrayR/config.yml"]
 
 # Default environment variables
 ENV PANEL_TYPE=SSpanel
