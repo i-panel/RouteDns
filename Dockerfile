@@ -15,6 +15,8 @@ ARG GOARCH
 WORKDIR /build
 COPY . .
 WORKDIR cmd/routedns
+RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geoip.dat" -o "/build/cmd/routedns/geoip.dat"
+RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geosite.dat" -o "/build/cmd/routedns/geosite.dat"
 RUN GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build
 
 # Use an official Ubuntu base image
@@ -30,8 +32,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geoip.dat" -o "/build/cmd/routedns/geoip.dat"
-RUN curl -L "https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geosite.dat" -o "/build/cmd/routedns/geosite.dat"
 
 
 FROM alpine:latest as routedns
