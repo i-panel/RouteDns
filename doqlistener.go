@@ -9,6 +9,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/XrayR-project/XrayR/common/mylego"
@@ -142,7 +144,41 @@ func (s DoQListener) Stop() error {
 	Log.WithFields(logrus.Fields{"protocol": "quic", "addr": s.addr}).Info("stopping listener")
 	return s.ln.Close()
 }
+func getQuicOriginalIP(w quic.Connection) net.IP {
+	// Try to get original IP from common CDN headers if available
+	if r, ok := w.(interface{ Request() *http.Request }); ok {
+		req := r.Request()
+		if req != nil {
+			// Check common CDN headers in order of preference
+			headers := []string{
+				"CF-Connecting-IP", // Cloudflare
+				"X-Real-IP",        // nginx
+				"X-Forwarded-For",  // General use
+				"True-Client-IP",   // Akamai
+				"X-Original-Forwarded-For",
+			}
 
+			for _, header := range headers {
+				if ip := req.Header.Get(header); ip != "" {
+					// Parse the IP address
+					if parsedIP := net.ParseIP(strings.TrimSpace(strings.Split(ip, ",")[0])); parsedIP != nil {
+						return parsedIP
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback to direct connection IP if no CDN headers found
+	switch addr := w.RemoteAddr().(type) {
+	case *net.TCPAddr:
+		return addr.IP
+	case *net.UDPAddr:
+		return addr.IP
+	default:
+		return nil
+	}
+}
 func (s DoQListener) handleConnection(connection quic.Connection) {
 	tlsServerName := connection.ConnectionState().TLS.ServerName
 
@@ -150,12 +186,16 @@ func (s DoQListener) handleConnection(connection quic.Connection) {
 		Listener:      s.id,
 		TLSServerName: tlsServerName,
 	}
-	switch addr := connection.RemoteAddr().(type) {
-	case *net.TCPAddr:
-		ci.SourceIP = addr.IP
-	case *net.UDPAddr:
-		ci.SourceIP = addr.IP
-	}
+	// switch addr := connection.RemoteAddr().(type) {
+	// case *net.TCPAddr:
+	// 	ci.SourceIP = addr.IP
+	// case *net.UDPAddr:
+	// 	ci.SourceIP = addr.IP
+	// }
+
+	// Get original client IP, considering CDN headers
+	ci.SourceIP = getQuicOriginalIP(connection)
+
 	log := s.log.WithField("client", connection.RemoteAddr())
 
 	if !isAllowed(s.opt.AllowedNet, ci.SourceIP) {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 
 	"github.com/XrayR-project/XrayR/common/mylego"
 	"github.com/miekg/dns"
@@ -89,6 +91,42 @@ func (s DNSListener) String() string {
 	return s.id
 }
 
+func getOriginalIP(w dns.ResponseWriter) net.IP {
+	// Try to get original IP from common CDN headers if available
+	if r, ok := w.(interface{ Request() *http.Request }); ok {
+		req := r.Request()
+		if req != nil {
+			// Check common CDN headers in order of preference
+			headers := []string{
+				"CF-Connecting-IP", // Cloudflare
+				"X-Real-IP",        // nginx
+				"X-Forwarded-For",  // General use
+				"True-Client-IP",   // Akamai
+				"X-Original-Forwarded-For",
+			}
+
+			for _, header := range headers {
+				if ip := req.Header.Get(header); ip != "" {
+					// Parse the IP address
+					if parsedIP := net.ParseIP(strings.TrimSpace(strings.Split(ip, ",")[0])); parsedIP != nil {
+						return parsedIP
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback to direct connection IP if no CDN headers found
+	switch addr := w.RemoteAddr().(type) {
+	case *net.TCPAddr:
+		return addr.IP
+	case *net.UDPAddr:
+		return addr.IP
+	default:
+		return nil
+	}
+}
+
 // DNS handler to forward all incoming requests to a given resolver.
 func listenHandler(id, protocol, addr string, r Resolver, allowedNet []*net.IPNet) dns.HandlerFunc {
 	metrics := NewListenerMetrics("listener", id)
@@ -106,12 +144,15 @@ func listenHandler(id, protocol, addr string, r Resolver, allowedNet []*net.IPNe
 			}
 		}
 
-		switch addr := w.RemoteAddr().(type) {
-		case *net.TCPAddr:
-			ci.SourceIP = addr.IP
-		case *net.UDPAddr:
-			ci.SourceIP = addr.IP
-		}
+		// switch addr := w.RemoteAddr().(type) {
+		// case *net.TCPAddr:
+		// 	ci.SourceIP = addr.IP
+		// case *net.UDPAddr:
+		// 	ci.SourceIP = addr.IP
+		// }
+
+		// Get original client IP, considering CDN headers
+		ci.SourceIP = getOriginalIP(w)
 
 		log := Log.WithFields(logrus.Fields{"id": id, "client": ci.SourceIP, "qname": qName(req), "protocol": protocol, "addr": addr})
 		log.Debug("received query")

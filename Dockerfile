@@ -49,6 +49,9 @@ ENTRYPOINT ["/routedns"]
 CMD ["/etc/rdns/config.toml"]
 
 
+FROM routedns as routednsdebug
+CMD ["/etc/rdns/config.toml", "-l", "6"]
+
 FROM routedns as routednsxtls
 # RUN mkdir /etc/XrayR/
 COPY --from=xrayr-builder /app/XrayR /usr/local/bin

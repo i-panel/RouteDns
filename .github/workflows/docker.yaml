@@ -19,5 +19,7 @@ jobs:
         run: |
           docker build --target routedns . --tag kontorol/routedns:latest
           docker push kontorol/routedns:latest
+          docker build --target routednsdebug . --tag kontorol/routedns:debug
+          docker push kontorol/routedns:debug
           docker build --target routednsxtls . --tag kontorol/routedns:xtls-latest
           docker push kontorol/routedns:xtls-latest
