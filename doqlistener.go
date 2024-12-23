@@ -151,8 +151,8 @@ func getQuicOriginalIP(w quic.Connection) net.IP {
 		if req != nil {
 			// Check common CDN headers in order of preference
 			headers := []string{
+				"x-real-ip",        // nginx
 				"CF-Connecting-IP", // Cloudflare
-				"X-Real-IP",        // nginx
 				"X-Forwarded-For",  // General use
 				"True-Client-IP",   // Akamai
 				"X-Original-Forwarded-For",
