@@ -140,7 +140,7 @@ install_XrayR() {
     chmod +x RouteDns
     mkdir /etc/RouteDns/ -p
     rm /etc/systemd/system/RouteDns.service -f
-    file="https://github.com/i-panel/RouteDns/raw/master/RouteDns.service"
+    file="https://github.com/i-panel/RouteDns/raw/master/cmd/routedns/RouteDns.service"
     wget -q -N --no-check-certificate -O /etc/systemd/system/RouteDns.service ${file}
     #cp -f XrayR.service /etc/systemd/system/
 
@@ -184,7 +184,7 @@ install_XrayR() {
         fi
     fi
 
-    curl -o /usr/bin/RouteDns -Ls https://raw.githubusercontent.com/i-panel/RouteDns/master/RouteDns.sh
+    curl -o /usr/bin/RouteDns -Ls https://raw.githubusercontent.com/i-panel/RouteDns/master/cmd/routedns/RouteDns.sh
     chmod +x /usr/bin/RouteDns
     ln -s /usr/bin/RouteDns /usr/bin/routedns # 小写兼容
     chmod +x /usr/bin/routedns
