@@ -49,13 +49,13 @@ An example systemd service file is provided [here](cmd/routedns/routedns.service
 
 Example configuration files for a number of use-cases can be found [here](cmd/routedns/example-config)
 
-### Docker container
-
 # Install
 
 ```
 bash <(curl -Ls https://raw.githubusercontent.com/i-panel/RouteDns/master/cmd/routedns/install.sh)
 ```
+
+### Docker container
 
 A container is available on [Docker Hub](https://hub.docker.com/r/i-panel/routedns). It comes with a very basic configuration which is expected to be overwritten with a custom config file.
 
