@@ -1,2 +1,3 @@
 routedns*
+!routedns.sh
 !routedns.service

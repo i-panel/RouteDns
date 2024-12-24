@@ -1,14 +1,18 @@
 [Unit]
-Description=RouteDNS - DNS stub resolver and router
+Description=RouteDns - DNS stub resolver and router
 After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
 DynamicUser=true
 NoNewPrivileges=true
-WorkingDirectory=/opt/routedns
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-ExecStart=/opt/routedns/routedns config.toml
+LimitAS=infinity
+LimitRSS=infinity
+LimitCORE=infinity
+LimitNOFILE=999999
+WorkingDirectory=/usr/local/RouteDns/
+ExecStart=/usr/local/RouteDns/RouteDns /etc/RouteDns/config.toml
 Restart=on-failure
 
 [Install]
