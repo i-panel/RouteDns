@@ -110,12 +110,12 @@ jobs:
       - name: Build RouteDns
         run: |
           mkdir -p build_assets
-          go build -v -o build_assets/RouteDns -trimpath -ldflags "-s -w -buildid="
+          go build -v -o build_assets/RouteDns -trimpath -ldflags "-s -w -buildid=" ./cmd/routedns
 
       - name: Build Mips softfloat RouteDns
         if: matrix.goarch == 'mips' || matrix.goarch == 'mipsle'
         run: |
-          GOMIPS=softfloat go build -v -o build_assets/RouteDns_softfloat -trimpath -ldflags "-s -w -buildid="
+          GOMIPS=softfloat go build -v -o build_assets/RouteDns_softfloat -trimpath -ldflags "-s -w -buildid=" ./cmd/routedns
       - name: Rename Windows RouteDns
         if: matrix.goos == 'windows'
         run: |
