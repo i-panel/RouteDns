@@ -100,7 +100,7 @@ install_acme() {
     curl https://get.acme.sh | sh
 }
 
-install_XrayR() {
+install_RouteDns() {
     if [[ -e /usr/local/RouteDns/ ]]; then
         rm /usr/local/RouteDns/ -rf
     fi
@@ -142,7 +142,7 @@ install_XrayR() {
     rm /etc/systemd/system/RouteDns.service -f
     file="https://github.com/i-panel/RouteDns/raw/master/cmd/routedns/RouteDns.service"
     wget -q -N --no-check-certificate -O /etc/systemd/system/RouteDns.service ${file}
-    #cp -f XrayR.service /etc/systemd/system/
+    #cp -f RouteDns.service /etc/systemd/system/
 
     wget -q -N --no-check-certificate -O /etc/RouteDns/geoip.dat https://raw.githubusercontent.com/Chocolate4u/Iran-v2ray-rules/release/geoip.dat
     if [[ $? -ne 0 ]]; then
@@ -171,7 +171,7 @@ install_XrayR() {
     if [[ ! -f /etc/RouteDns/config.toml ]]; then
         cp config.toml /etc/RouteDns/
         echo -e ""
-        echo -e "Fresh installation, please refer to the tutorial first：https://github.com/XrayR-project/RouteDns，Configure necessary content"
+        echo -e "Fresh installation, please refer to the tutorial first：https://github.com/i-panel/RouteDns，Configure necessary content"
     else
         systemctl start RouteDns
         sleep 2
@@ -180,7 +180,7 @@ install_XrayR() {
         if [[ $? == 0 ]]; then
             echo -e "${green}RouteDns restart successfully${plain}"
         else
-            echo -e "${red}RouteDns It may fail to start, please use RouteDns log to view the log information later, if it cannot start, the configuration format may have been changed, please go to the wiki to view：https://github.com/XrayR-project/RouteDns/wiki${plain}"
+            echo -e "${red}RouteDns It may fail to start, please use RouteDns log to view the log information later, if it cannot start, the configuration format may have been changed, please go to the wiki to view：https://github.com/i-panel/RouteDns/wiki${plain}"
         fi
     fi
 
