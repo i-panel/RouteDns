@@ -51,7 +51,13 @@ Example configuration files for a number of use-cases can be found [here](cmd/ro
 
 ### Docker container
 
-A container is available on [Docker Hub](https://hub.docker.com/r/folbricht/routedns). It comes with a very basic configuration which is expected to be overwritten with a custom config file.
+# Install
+
+```
+bash <(curl -Ls https://raw.githubusercontent.com/i-panel/RouteDns/master/cmd/routedns/install.sh)
+```
+
+A container is available on [Docker Hub](https://hub.docker.com/r/i-panel/routedns). It comes with a very basic configuration which is expected to be overwritten with a custom config file.
 
 Use the default config (simple DNS -> DoT proxy):
 
