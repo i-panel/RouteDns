@@ -58,7 +58,7 @@ func GetTLSClientConfig(r *resolver) (*tls.Config, error) {
 	return rdns.TLSClientConfig(ca, cert, key, r.ServerName)
 }
 
-func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
+func (config *Config) GetPanelManager(logLevel uint32, asseturl string) (*Manager, error) {
 	// Set the log level in the library package
 	if logLevel > 6 {
 		return nil, fmt.Errorf("invalid log level: %d", logLevel)
@@ -67,12 +67,16 @@ func (config *Config) GetPanelManager(logLevel uint32) (*Manager, error) {
 		return nil, errors.New("not enough arguments")
 	}
 
-	pwd, wdErr := os.Getwd()
-	if wdErr != nil {
-		return nil, fmt.Errorf("can not get current working directory")
+	
+	if asseturl == "" {
+		pwd, wdErr := os.Getwd()
+		if wdErr != nil {
+			return nil, fmt.Errorf("can not get current working directory")
+		}
+		asseturl = pwd
 	}
 
-	err := os.Setenv("XRAY_LOCATION_ASSET", pwd)
+	err := os.Setenv("XRAY_LOCATION_ASSET", asseturl)
 	if err != nil {
 		return nil, fmt.Errorf("could not set asset working directory., error: %s", err)
 	}

@@ -45,7 +45,7 @@ var _ BlocklistDB = &HostsXDB{}
 func NewHostsXDB(name string, loader *PanelLoader) (*HostsXDB, error) {
 
 	var hosts *conf.HostsWrapper
-	switch loader.opt.Type {
+	switch name {
 	case "allow":
 		hosts = loader.opt.NodeInfo.RouteDNS.Allow.Hosts
 	case "block":

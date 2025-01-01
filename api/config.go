@@ -213,17 +213,20 @@ type route struct {
 }
 
 // LoadConfig reads a config file and returns the decoded structure.
-func LoadConfig(name ...string) (Config, error) {
+func LoadConfig(name ...string) (Config, string, error) {
 	b := new(bytes.Buffer)
 	var c Config
+	u := ""
 	for _, fn := range name {
 		if err := LoadFile(b, fn); err != nil {
-			return c, err
+			return c, "", err
 		}
+		u = fn
+		// Set ASSET Path and Config Path for XrayR
 		b.WriteString("\n")
 	}
 	_, err := toml.DecodeReader(b, &c)
-	return c, err
+	return c, u, err
 }
 
 func LoadFile(w io.Writer, name string) error {

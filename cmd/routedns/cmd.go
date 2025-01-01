@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
@@ -73,12 +74,12 @@ func start(opt options, args []string) error {
 
 	}
 
-	config, err := api.LoadConfig(args...)
+	config, confUrl, err := api.LoadConfig(args...)
 	if err != nil {
 		return err
 	}
 
-	manager, err := config.GetPanelManager(opt.logLevel)
+	manager, err := config.GetPanelManager(opt.logLevel, path.Dir(confUrl))
 	if err != nil {
 		return err
 	}
